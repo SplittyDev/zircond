@@ -1,0 +1,9 @@
+cargo-features = ["edition"]
+
+[package]
+name = "zircond"
+version = "0.1.0"
+authors = ["splittydev <splittydev@protonmail.com>"]
+edition = "2018"
+
+[dependencies]
