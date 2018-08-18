@@ -1,5 +1,9 @@
 #![feature(uniform_paths)]
 
+mod server;
+use server::Server;
+
 fn main() {
-    println!("Hello, world!");
+    let server = Server::new(None, None);
+    server.listen();
 }
