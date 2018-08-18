@@ -1,128 +1,22 @@
+mod user;
+mod channel;
+pub use self::user::User;
+pub use self::channel::Channel;
+
 use std::io::{Read, Write, BufRead};
 use std::net::{TcpListener, SocketAddr};
 use std::thread;
-
-struct IrcMessageTag(String, Option<String>);
-
-impl ToString for IrcMessageTag {
-    fn to_string(&self) -> String {
-
-        // Pre-calculate the exact tag size
-        let len = self.0.len() + self.1.as_ref().map_or(0, |tag| tag.len() + 1);
-
-        // Allocate a perfectly fitted string
-        let mut buf = String::with_capacity(len);
-
-        // Push the tag parts
-        buf.push_str(self.0.as_ref());
-        if self.1.is_some() {
-            buf.push('=');
-            buf.push_str(self.1.as_ref().unwrap().as_ref());
-        }
-        
-        buf
-    }
-}
-
-enum IrcMessageTags {
-    One(IrcMessageTag),
-    Many(Vec<IrcMessageTag>),
-}
-
-impl ToString for IrcMessageTags {
-    fn to_string(&self) -> String {
-
-        // Map multiple tags to their string representations
-        let tags = match self {
-            IrcMessageTags::Many(tags) => Some(tags.iter().map(|tag| tag.to_string()).collect::<Vec<_>>()),
-            _ => None,
-        };
-
-        // Get the exact combined length of all tags
-        let len = match self {
-            IrcMessageTags::One(tag) => tag.to_string().len(),
-            IrcMessageTags::Many(_) => tags.iter().map(|tag| tag.len()).fold(0, |a, b| a + b),
-        };
-
-        // Get the tag separator count
-        let len_separators = match self {
-            IrcMessageTags::Many(tags) => if tags.len() > 1 { tags.len() - 1 } else { 0 },
-            _ => 0,
-        };
-
-        // Create a perfectly fitted string
-        let mut buf = String::with_capacity(len + len_separators + 1);
-
-        // Push the tag prefix '@'
-        buf.push('@');
-
-        match self {
-
-            // Push a single tag to the string buffer
-            IrcMessageTags::One(tag) => buf.push_str(tag.to_string().as_ref()),
-
-            // Push multiple tags to the string buffer
-            IrcMessageTags::Many(_) => {
-
-                // Unwrap the tag strings.
-                // This is guaranteed to work since the tags variable is
-                // always Some(_) if the IrcMessageTags variant is Many(_)
-                let tags = tags.unwrap();
-
-                for (i, tag) in tags.iter().enumerate() {
-
-                    // Push separator if necessary
-                    if i > 0 {
-                        buf.push(';');
-                    }
-
-                    buf.push_str(tag);
-                }
-            }
-        }
-
-        buf
-    }
-}
-
-struct IrcMessagePrefix(String);
-
-struct IrcMessage {
-    tags: Option<IrcMessageTags>,
-    prefix: Option<IrcMessagePrefix>,
-    command: IrcMessageCommand,
-}
-
-impl IrcMessage {
-    pub fn new(command: IrcMessageCommand, prefix: Option<IrcMessagePrefix>, tags: Option<IrcMessageTags>) -> Self {
-        Self {
-            tags,
-            prefix,
-            command,
-        }
-    }
-
-    pub fn parse(line: String) -> Self {
-        
-        IrcMessage::default()
-    }
-}
-
-impl Default for IrcMessage {
-    fn default() -> Self {
-        Self::new(IrcMessageCommand::None, None, None)
-    }
-}
-
-enum IrcMessageCommand {
-    None,
-    Nick(String),
-    User(String, Option<String>)
-}
+use std::sync::Arc;
+use std::sync::RwLock;
+use std::sync::Mutex;
+use std::ops::DerefMut;
+use crate::message::{IrcMessageRequest, IrcMessageCommand, Respond};
 
 pub struct Server {
     host: String,
     port: u16,
+    users: Arc<RwLock<Vec<Arc<Mutex<User>>>>>,
+    channels: RwLock<Vec<Channel>>,
 }
 
 impl Server {
@@ -130,21 +24,54 @@ impl Server {
         Self {
             host: host.unwrap_or("127.0.0.1".to_owned()),
             port: port.unwrap_or(6667),
+            users: Arc::new(RwLock::new(Vec::new())),
+            channels: RwLock::new(Vec::new()),
         }
     }
 
     pub fn listen(&self) {
+        macro_rules! send {
+            ($writer:expr; $variant:expr) => (
+                $writer.write(format!("{}\r\n", $variant.to_string()).as_ref()).unwrap()
+            );
+        }
         let listener = TcpListener::bind((self.host.as_ref(), self.port)).unwrap();
         let mut threads = Vec::new();
         for client in listener.incoming() {
-            let handle = thread::spawn(|| {
-                let client = client.unwrap();
+            let user = Arc::new(Mutex::new(User::new()));
+            let user_list = self.users.clone();
+            let host = Arc::new(self.host.clone());
+            let handle = thread::spawn(move || {
+                let mut client = client.unwrap();
                 let addr = client.peer_addr().unwrap();
-                let mut reader = std::io::BufReader::new(client);
+                let mut reader = std::io::BufReader::new(client.try_clone().unwrap());
+                {
+                    let mut w = user_list.write().unwrap();
+                    w.deref_mut().push(user.clone());
+                }
                 loop {
                     let mut line = String::new();
                     reader.read_line(&mut line).unwrap();
                     print!("[{:?}] {}", addr, line);
+                    let cmd = IrcMessageRequest::parse(line);
+                    match cmd.command {
+                        IrcMessageCommand::Nick(nickname) => {
+                            let mut user = user.lock().unwrap();
+                            user.set_nickname(nickname);
+                        },
+                        IrcMessageCommand::User(username, realname) => {
+                            let nick: String;
+                            {
+                                let mut user = user.lock().unwrap();
+                                nick = user.nickname();
+                                user.set_names(username, realname);
+                            }
+                            send!(client; Respond::to(&host.clone(), &nick).welcome(format!("Welcome to the zircond test network, {}", nick)));
+                            send!(client; Respond::to(&host.clone(), &nick).your_host("Your host is zircond, running version 0.01".to_owned()));
+                        },
+                        com => println!("Unhandled command: {:?}", com),
+                    }
+                    client.flush().unwrap();
                 }
             });
             threads.push(handle);
@@ -154,7 +81,7 @@ impl Server {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use crate::message::*;
 
     #[test]
     fn irc_message_tag_struct_to_string() {
@@ -206,5 +133,17 @@ mod test {
         assert_eq!("@foo=bar;baz=bax", tags_b);
         assert_eq!("@foo;bar=baz", tags_c);
         assert_eq!("@foo=bar;baz", tags_d);
+    }
+
+    #[test]
+    fn irc_message_prefix_to_string() {
+        let prefix = IrcMessagePrefix("irc.foo.bar".to_owned()).to_string();
+        assert_eq!(":irc.foo.bar", prefix);
+    }
+
+    #[test]
+    fn irc_message_command_to_string_nick() {
+        let cmd = IrcMessageCommand::Nick("foo".to_owned()).to_string();
+        assert_eq!("NICK :foo", cmd);
     }
 }
