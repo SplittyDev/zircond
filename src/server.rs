@@ -35,6 +35,7 @@ impl Server {
         let mut next_user_id = 0_usize;
         let mut threads = Vec::new();
 
+        // Macro for simple server-to-client communication
         macro_rules! send {
             ($writer:expr; $variant:expr) => (
                 $writer.write(format!("{}\r\n", $variant.to_string()).as_ref()).unwrap()
@@ -103,15 +104,21 @@ impl Server {
                     match cmd.command {
 
                         IrcMessageCommand::Nick(nickname) => {
+
+                            // Set nickname
                             let mut user = user.write().unwrap();
                             user.set_nickname(nickname);
                         }
 
                         IrcMessageCommand::User(username, realname) => {
+
+                            // Set username and realname
                             {
                                 let mut user = user.write().unwrap();
                                 user.set_names(username, realname);
                             }
+
+                            // Send welcome sequence
                             send!(client; Respond::to(&host.clone(), &nick).welcome(format!("Welcome to the zircond test network, {}", nick)));
                             send!(client; Respond::to(&host.clone(), &nick).your_host("Your host is zircond, running version 0.01".to_owned()));
                             send!(client; Respond::to(&host.clone(), &nick).motd_start());
@@ -120,13 +127,24 @@ impl Server {
                         }
 
                         IrcMessageCommand::Join(channel_name) => {
+
+                            // Get the writeable channel list
                             let mut w = channel_list.write().unwrap();
+
+                            // Test whether the channel already exists
                             if !w.deref_mut().iter().any(|channel| channel.name == channel_name) {
-                                println!("Channel created: {}", channel_name);
+
+                                // Create the new channel
                                 let channel = Channel::new(channel_name.clone());
+
+                                // Add the user to the channel
                                 channel.join_user(user.clone());
+
+                                // Add the channel the list
                                 w.deref_mut().push(channel);
                             }
+
+                            // Send the join acknowledgement to the user
                             send!(client; Respond::to(&host.clone(), &nick).join(channel_name));
                         }
 
