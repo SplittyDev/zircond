@@ -16,8 +16,8 @@ pub struct Server {
     host: String,
     port: u16,
     clients: Arc<RwLock<Vec<TcpStream>>>,
-    users: Arc<RwLock<Vec<Arc<Mutex<User>>>>>,
-    channels: RwLock<Vec<Channel>>,
+    users: Arc<RwLock<Vec<Arc<RwLock<User>>>>>,
+    channels: Arc<RwLock<Vec<Channel>>>,
 }
 
 impl Server {
@@ -27,7 +27,7 @@ impl Server {
             port: port.unwrap_or(6667),
             clients: Arc::new(RwLock::new(Vec::new())),
             users: Arc::new(RwLock::new(Vec::new())),
-            channels: RwLock::new(Vec::new()),
+            channels: Arc::new(RwLock::new(Vec::new())),
         }
     }
 
@@ -50,6 +50,7 @@ impl Server {
             // Get shared references important stuff
             let user_list = self.users.clone();
             let client_list = self.clients.clone();
+            let channel_list = self.channels.clone();
             let host = Arc::new(self.host.clone());
             let mut client = client.unwrap();
 
@@ -61,7 +62,7 @@ impl Server {
 
             // Create a new user for this client
             let user = User::new(next_user_id);
-            let user = Arc::new(Mutex::new(user));
+            let user = Arc::new(RwLock::new(user));
             next_user_id += 1;
 
             // Add the new user to the user list
@@ -92,23 +93,46 @@ impl Server {
                     // Parse the message
                     let cmd = IrcMessageRequest::parse(line);
 
+                    // Read the nickname
+                    let nick = {
+                        let user = user.clone();
+                        let mut user = user.read().unwrap();
+                        user.nickname()
+                    };
+
                     match cmd.command {
 
                         IrcMessageCommand::Nick(nickname) => {
-                            let mut user = user.lock().unwrap();
+                            let mut user = user.write().unwrap();
                             user.set_nickname(nickname);
-                        },
+                        }
 
                         IrcMessageCommand::User(username, realname) => {
-                            let nick: String;
                             {
-                                let mut user = user.lock().unwrap();
-                                nick = user.nickname();
+                                let mut user = user.write().unwrap();
                                 user.set_names(username, realname);
                             }
                             send!(client; Respond::to(&host.clone(), &nick).welcome(format!("Welcome to the zircond test network, {}", nick)));
                             send!(client; Respond::to(&host.clone(), &nick).your_host("Your host is zircond, running version 0.01".to_owned()));
-                        },
+                            send!(client; Respond::to(&host.clone(), &nick).motd_start());
+                            send!(client; Respond::to(&host.clone(), &nick).motd(r"Zircon IRCd".to_owned()));
+                            send!(client; Respond::to(&host.clone(), &nick).motd_end());
+                        }
+
+                        IrcMessageCommand::Join(channel_name) => {
+                            let mut w = channel_list.write().unwrap();
+                            if !w.deref_mut().iter().any(|channel| channel.name == channel_name) {
+                                println!("Channel created: {}", channel_name);
+                                let channel = Channel::new(channel_name.clone());
+                                channel.join_user(user.clone());
+                                w.deref_mut().push(channel);
+                            }
+                            send!(client; Respond::to(&host.clone(), &nick).join(channel_name));
+                        }
+
+                        IrcMessageCommand::Ping(challenge) => {
+                            send!(client; Respond::to(&host.clone(), &nick).pong(challenge));
+                        }
 
                         com => println!("Unhandled command: {:?}", com),
                     }

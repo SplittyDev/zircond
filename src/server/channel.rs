@@ -3,8 +3,8 @@ use std::ops::DerefMut;
 use super::User;
 
 pub struct Channel {
-    name: String,
-    users: Arc<RwLock<Vec<Arc<Mutex<User>>>>>,
+    pub name: String,
+    users: Arc<RwLock<Vec<Arc<RwLock<User>>>>>,
 }
 
 impl Channel {
@@ -15,7 +15,7 @@ impl Channel {
         }
     }
 
-    pub fn join_user(&self, user: Arc<Mutex<User>>) {
+    pub fn join_user(&self, user: Arc<RwLock<User>>) {
         let mut w = self.users.write().unwrap();
         w.deref_mut().push(user);
     }
@@ -24,7 +24,7 @@ impl Channel {
         let mut w = self.users.write().unwrap();
         let user_list = w.deref_mut();
         user_list.iter().position(|user| {
-            user.lock().unwrap().id == id
+            user.read().unwrap().id == id
         }).map(|i| user_list.remove(i));
     }
 }

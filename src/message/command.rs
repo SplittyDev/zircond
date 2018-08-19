@@ -1,8 +1,16 @@
 #[derive(Debug)]
 pub enum IrcMessageCommand {
     None,
+
+    // Authentication
     Nick(String),
-    User(String, Option<String>)
+    User(String, Option<String>),
+
+    // Channels
+    Join(String),
+
+    // Misc
+    Ping(String),
 }
 
 impl ToString for IrcMessageCommand {
@@ -14,7 +22,11 @@ impl ToString for IrcMessageCommand {
             IrcMessageCommand::Nick(user) => {
                 command = "NICK";
                 params = Some(user);
-            },
+            }
+            IrcMessageCommand::Join(channel) => {
+                command = "JOIN";
+                params = Some(channel);
+            }
             _ => panic!("Unimplemented command: {:?}", self),
         };
         let mut buf = String::with_capacity(command.len());

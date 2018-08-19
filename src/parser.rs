@@ -116,7 +116,7 @@ impl IrcMessageParser {
                     $params
                         .iter()
                         .nth($pos)
-                        .expect(&format!("Command '{}' MUST include {}!", stringify!($command), $name))
+                        .expect(&format!("Command '{}' MUST include the {}!", stringify!($command), $name))
                         .to_owned()
                 );
                 ($params:expr; $command:ident $pos:expr => OPT $name:expr) => (
@@ -161,6 +161,14 @@ impl IrcMessageParser {
                     validate!(parameters; USER 2 => SHOULD EQ "*"; "Third parameter should equal '*'");
                     let realname = extract!(parameters; USER 3 => OPT "realname");
                     IrcMessageCommand::User(username, realname)
+                }
+                "JOIN" => {
+                    let channel = extract!(parameters; JOIN 0 => REQ "channel name");
+                    IrcMessageCommand::Join(channel)
+                }
+                "PING" => {
+                    let challenge = extract!(parameters; JOIN 0 => REQ "challenge");
+                    IrcMessageCommand::Ping(challenge)   
                 }
                 _ => {
                     println!("Unimplemented: {}", command_name);
