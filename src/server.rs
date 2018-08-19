@@ -8,7 +8,6 @@ use std::net::{TcpListener, TcpStream};
 use std::thread;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::sync::Mutex;
 use std::ops::DerefMut;
 use crate::message::{IrcMessageRequest, IrcMessageCommand, Respond};
 
@@ -38,7 +37,7 @@ impl Server {
         // Macro for simple server-to-client communication
         macro_rules! send {
             ($writer:expr; $variant:expr) => (
-                $writer.write(format!("{}\r\n", $variant.to_string()).as_ref()).unwrap()
+                $writer.write_all(format!("{}\r\n", $variant.to_string()).as_ref())
             );
         }
 
@@ -97,7 +96,7 @@ impl Server {
                     // Read the nickname
                     let nick = {
                         let user = user.clone();
-                        let mut user = user.read().unwrap();
+                        let user = user.read().unwrap();
                         user.nickname()
                     };
 

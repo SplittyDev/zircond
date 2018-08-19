@@ -30,7 +30,7 @@ impl ToString for IrcMessageCommand {
             _ => panic!("Unimplemented command: {:?}", self),
         };
         let mut buf = String::with_capacity(command.len());
-        buf.push_str(command.as_ref());
+        buf.push_str(command);
         if params.is_some() {
             buf.push_str(&" :");
             buf.push_str(params.unwrap());
