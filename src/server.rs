@@ -3,8 +3,8 @@ mod channel;
 pub use self::user::User;
 pub use self::channel::Channel;
 
-use std::io::{Read, Write, BufRead};
-use std::net::{TcpListener, SocketAddr};
+use std::io::{Write, BufRead};
+use std::net::{TcpListener, TcpStream};
 use std::thread;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -15,6 +15,7 @@ use crate::message::{IrcMessageRequest, IrcMessageCommand, Respond};
 pub struct Server {
     host: String,
     port: u16,
+    clients: Arc<RwLock<Vec<TcpStream>>>,
     users: Arc<RwLock<Vec<Arc<Mutex<User>>>>>,
     channels: RwLock<Vec<Channel>>,
 }
@@ -24,41 +25,80 @@ impl Server {
         Self {
             host: host.unwrap_or("127.0.0.1".to_owned()),
             port: port.unwrap_or(6667),
+            clients: Arc::new(RwLock::new(Vec::new())),
             users: Arc::new(RwLock::new(Vec::new())),
             channels: RwLock::new(Vec::new()),
         }
     }
 
     pub fn listen(&self) {
+        let mut next_user_id = 0_usize;
+        let mut threads = Vec::new();
+
         macro_rules! send {
             ($writer:expr; $variant:expr) => (
                 $writer.write(format!("{}\r\n", $variant.to_string()).as_ref()).unwrap()
             );
         }
+
+        // Bind the tcp listener socket
         let listener = TcpListener::bind((self.host.as_ref(), self.port)).unwrap();
-        let mut threads = Vec::new();
+
+        // Accept new clients
         for client in listener.incoming() {
-            let user = Arc::new(Mutex::new(User::new()));
+
+            // Get shared references important stuff
             let user_list = self.users.clone();
+            let client_list = self.clients.clone();
             let host = Arc::new(self.host.clone());
+            let mut client = client.unwrap();
+
+            // Add the new client to the client list
+            {
+                let mut w = client_list.write().unwrap();
+                w.deref_mut().push(client.try_clone().unwrap());
+            }
+
+            // Create a new user for this client
+            let user = User::new(next_user_id);
+            let user = Arc::new(Mutex::new(user));
+            next_user_id += 1;
+
+            // Add the new user to the user list
+            {
+                let mut w = user_list.write().unwrap();
+                w.deref_mut().push(user.clone());
+            }
+
+            // Spawn a thread to handle the client
             let handle = thread::spawn(move || {
-                let mut client = client.unwrap();
+
+                // Get the remote address of the client
                 let addr = client.peer_addr().unwrap();
+
+                // Get a buffered reader for the incoming data
                 let mut reader = std::io::BufReader::new(client.try_clone().unwrap());
-                {
-                    let mut w = user_list.write().unwrap();
-                    w.deref_mut().push(user.clone());
-                }
+
+                // Handle new messages in a loop
                 loop {
+
+                    // Read the next line
                     let mut line = String::new();
                     reader.read_line(&mut line).unwrap();
+
+                    // Debug: Print the line
                     print!("[{:?}] {}", addr, line);
+
+                    // Parse the message
                     let cmd = IrcMessageRequest::parse(line);
+
                     match cmd.command {
+
                         IrcMessageCommand::Nick(nickname) => {
                             let mut user = user.lock().unwrap();
                             user.set_nickname(nickname);
                         },
+
                         IrcMessageCommand::User(username, realname) => {
                             let nick: String;
                             {
@@ -69,8 +109,11 @@ impl Server {
                             send!(client; Respond::to(&host.clone(), &nick).welcome(format!("Welcome to the zircond test network, {}", nick)));
                             send!(client; Respond::to(&host.clone(), &nick).your_host("Your host is zircond, running version 0.01".to_owned()));
                         },
+
                         com => println!("Unhandled command: {:?}", com),
                     }
+
+                    // Flush writes
                     client.flush().unwrap();
                 }
             });

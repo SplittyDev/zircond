@@ -1,13 +1,15 @@
 #[derive(Debug)]
 pub struct User {
+    pub id: usize,
     nickname: Option<String>,
     username: Option<String>,
     realname: Option<String>,
 }
 
 impl User {
-    pub fn new() -> User {
+    pub fn new(id: usize) -> User {
         Self {
+            id: id,
             nickname: None,
             username: None,
             realname: None,
