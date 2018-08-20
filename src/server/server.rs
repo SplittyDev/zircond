@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::ops::DerefMut;
 use crate::message::{IrcMessageRequest, IrcMessageCommand, Respond};
-use super::{User, Channel, ServerState};
+use super::{User, Channel, ServerState, ClientState};
 
 pub struct Server {
     host: String,
@@ -29,7 +29,7 @@ impl Server {
         // Macro for simple server-to-client communication
         macro_rules! send {
             ($writer:expr; $variant:expr) => (
-                $writer.write_all(format!("{}\r\n", $variant.to_string()).as_ref()).unwrap()
+                $writer.stream().write_all(format!("{}\r\n", $variant.to_string()).as_ref()).unwrap()
             );
         }
 
@@ -41,16 +41,9 @@ impl Server {
 
             // Get shared references important stuff
             let user_list = self.state.users();
-            let client_list = self.state.clients();
             let channel_list = self.state.channels();
             let host = Arc::new(self.host.clone());
-            let mut client = client.unwrap();
-
-            // Add the new client to the client list
-            {
-                let mut w = client_list.write().unwrap();
-                w.deref_mut().push(client.try_clone().unwrap());
-            }
+            let client = client.unwrap();
 
             // Create a new user for this client
             let user = User::new(next_user_id);
@@ -63,14 +56,18 @@ impl Server {
                 w.deref_mut().push(user.clone());
             }
 
+            // Create client state
+            let client_state = Arc::new(ClientState::new(client, user));
+            self.state.add_client(client_state.clone());
+
             // Spawn a thread to handle the client
             let handle = thread::spawn(move || {
 
                 // Get the remote address of the client
-                let addr = client.peer_addr().unwrap();
+                let addr = client_state.stream().peer_addr().unwrap();
 
                 // Get a buffered reader for the incoming data
-                let mut reader = std::io::BufReader::new(client.try_clone().unwrap());
+                let mut reader = std::io::BufReader::new(client_state.stream().try_clone().unwrap());
 
                 // Handle new messages in a loop
                 loop {
@@ -87,7 +84,7 @@ impl Server {
 
                     // Read the nickname
                     let nick = {
-                        let user = user.clone();
+                        let user = client_state.user();
                         let user = user.read().unwrap();
                         user.nickname()
                     };
@@ -97,6 +94,7 @@ impl Server {
                         IrcMessageCommand::Nick(nickname) => {
 
                             // Set nickname
+                            let user = client_state.user();
                             let mut user = user.write().unwrap();
                             user.set_nickname(nickname);
                         }
@@ -105,16 +103,17 @@ impl Server {
 
                             // Set username and realname
                             {
+                                let user = client_state.user();
                                 let mut user = user.write().unwrap();
                                 user.set_names(username, realname);
                             }
 
                             // Send welcome sequence
-                            send!(client; Respond::to(&host.clone(), &nick).welcome(format!("Welcome to the zircond test network, {}", nick)));
-                            send!(client; Respond::to(&host.clone(), &nick).your_host("Your host is zircond, running version 0.01".to_owned()));
-                            send!(client; Respond::to(&host.clone(), &nick).motd_start());
-                            send!(client; Respond::to(&host.clone(), &nick).motd(r"Zircon IRCd"));
-                            send!(client; Respond::to(&host.clone(), &nick).motd_end());
+                            send!(client_state; Respond::to(&host.clone(), &nick).welcome(format!("Welcome to the zircond test network, {}", nick)));
+                            send!(client_state; Respond::to(&host.clone(), &nick).your_host("Your host is zircond, running version 0.01".to_owned()));
+                            send!(client_state; Respond::to(&host.clone(), &nick).motd_start());
+                            send!(client_state; Respond::to(&host.clone(), &nick).motd(r"Zircon IRCd"));
+                            send!(client_state; Respond::to(&host.clone(), &nick).motd_end());
                         }
 
                         IrcMessageCommand::Join(channel_name) => {
@@ -129,25 +128,25 @@ impl Server {
                                 let channel = Channel::new(channel_name.clone());
 
                                 // Add the user to the channel
-                                channel.join_user(user.clone());
+                                channel.join_user(client_state.user());
 
                                 // Add the channel the list
                                 w.deref_mut().push(channel);
                             }
 
                             // Send the join acknowledgement to the user
-                            send!(client; Respond::to(&host.clone(), &nick).join(channel_name));
+                            send!(client_state; Respond::to(&host.clone(), &nick).join(channel_name));
                         }
 
                         IrcMessageCommand::Ping(challenge) => {
-                            send!(client; Respond::to(&host.clone(), &nick).pong(challenge));
+                            send!(client_state; Respond::to(&host.clone(), &nick).pong(challenge));
                         }
 
                         com => println!("Unhandled command: {:?}", com),
                     }
 
                     // Flush writes
-                    client.flush().unwrap();
+                    client_state.stream().flush().unwrap();
                 }
             });
             threads.push(handle);

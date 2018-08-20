@@ -1,11 +1,13 @@
 mod user;
 mod channel;
 mod server_state;
+mod client_state;
 mod server;
 
 pub use self::user::User;
 pub use self::channel::Channel;
 pub use self::server_state::ServerState;
+pub use self::client_state::ClientState;
 pub use self::server::Server;
 
 #[cfg(test)]

@@ -1,15 +1,13 @@
-use std::net::TcpStream;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::ops::DerefMut;
-use super::{User, Channel};
+use super::{User, Channel, ClientState};
 
 pub type Shared<T> = Arc<RwLock<T>>;
 pub type SharedVec<T> = Shared<Vec<T>>;
 
 pub struct ServerState {
     channels: SharedVec<Channel>,
-    clients: SharedVec<TcpStream>,
+    clients: SharedVec<Arc<ClientState>>,
     users: SharedVec<Shared<User>>,
 }
 
@@ -28,14 +26,16 @@ impl ServerState {
         self.channels.clone()
     }
 
-    pub fn clients(&self) -> SharedVec<TcpStream> {
+    pub fn clients(&self) -> SharedVec<Arc<ClientState>> {
         self.clients.clone()
     }
 
     pub fn users(&self) -> SharedVec<Shared<User>> {
         self.users.clone()
     }
-}
 
-pub struct ClientState {
+    pub fn add_client(&self, client: Arc<ClientState>) {
+        let mut w = self.clients.write().unwrap();
+        w.push(client);
+    }
 }
