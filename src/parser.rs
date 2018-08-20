@@ -4,7 +4,7 @@ use crate::message::*;
 pub struct IrcMessageParser;
 
 impl IrcMessageParser {
-    pub fn parse(line: String) -> IrcMessageRequest {
+    pub fn parse(line: &str) -> IrcMessageRequest {
         let mut chars: Chars = line.chars();
         let mut tag: Option<IrcMessageTags> = None;
         let mut prefix: Option<IrcMessagePrefix> = None;
@@ -80,22 +80,17 @@ impl IrcMessageParser {
         fn parse_command_parameter(chars: &mut Chars) -> Option<String> {
             let mut parameter = String::new();
             let mut trailing_parameter = false;
-            loop {
-                match chars.next() {
-                    Some(chr) => {
-                        match chr {
-                            ' ' if !trailing_parameter => break,
-                            ':' => trailing_parameter = true,
-                            _ => parameter.push(chr),
-                        }
-                    },
-                    None => break,
+            for chr in chars {
+                match chr {
+                    ' ' if !trailing_parameter => break,
+                    ':' => trailing_parameter = true,
+                    _ => parameter.push(chr),
                 }
             }
-            if parameter.len() > 0 {
-                Some(parameter.trim().to_owned())
-            } else {
+            if parameter.is_empty() {
                 None
+            } else {
+                Some(parameter.trim().to_owned())
             }
         }
 

@@ -16,7 +16,7 @@ impl IrcMessageRequest {
         }
     }
 
-    pub fn parse(line: String) -> Self {
+    pub fn parse(line: &str) -> Self {
         IrcMessageParser::parse(line)
     }
 }

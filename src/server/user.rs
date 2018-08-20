@@ -42,7 +42,7 @@ impl User {
     }
 
     pub fn set_names(&mut self, username: String, realname: Option<String>) {
-        self.realname = Some(realname.unwrap_or(username.clone()));
+        self.realname = Some(realname.unwrap_or_else(|| username.clone()));
         self.username = Some(username);
     }
 }

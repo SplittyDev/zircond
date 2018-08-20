@@ -48,7 +48,7 @@ impl<'a> ResponseBuilder<'a> {
         self
     }
 
-    pub fn motd(mut self, message: String) -> Self {
+    pub fn motd(mut self, message: &str) -> Self {
         self.auto_insert_trailing_separator = false;
         self.code = Some("372");
         self.parameters.push(format!(":- {}", message));

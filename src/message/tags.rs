@@ -17,7 +17,7 @@ impl ToString for IrcMessageTags {
         // Get the exact combined length of all tags
         let len = match self {
             IrcMessageTags::One(tag) => tag.to_string().len(),
-            IrcMessageTags::Many(_) => tags.iter().map(|tag| tag.len()).fold(0, |a, b| a + b),
+            IrcMessageTags::Many(_) => tags.iter().map(|tag| tag.len()).sum(),
         };
 
         // Get the tag separator count

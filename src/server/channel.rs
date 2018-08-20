@@ -1,4 +1,4 @@
-use std::sync::{Arc, RwLock, Mutex};
+use std::sync::{Arc, RwLock};
 use std::ops::DerefMut;
 use super::User;
 

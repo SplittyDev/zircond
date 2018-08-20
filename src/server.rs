@@ -22,7 +22,7 @@ pub struct Server {
 impl Server {
     pub fn new(host: Option<String>, port: Option<u16>) -> Self {
         Self {
-            host: host.unwrap_or("127.0.0.1".to_owned()),
+            host: host.unwrap_or_else(|| "127.0.0.1".to_owned()),
             port: port.unwrap_or(6667),
             clients: Arc::new(RwLock::new(Vec::new())),
             users: Arc::new(RwLock::new(Vec::new())),
@@ -37,7 +37,7 @@ impl Server {
         // Macro for simple server-to-client communication
         macro_rules! send {
             ($writer:expr; $variant:expr) => (
-                $writer.write_all(format!("{}\r\n", $variant.to_string()).as_ref())
+                $writer.write_all(format!("{}\r\n", $variant.to_string()).as_ref()).unwrap()
             );
         }
 
@@ -91,7 +91,7 @@ impl Server {
                     print!("[{:?}] {}", addr, line);
 
                     // Parse the message
-                    let cmd = IrcMessageRequest::parse(line);
+                    let cmd = IrcMessageRequest::parse(&line);
 
                     // Read the nickname
                     let nick = {
@@ -121,7 +121,7 @@ impl Server {
                             send!(client; Respond::to(&host.clone(), &nick).welcome(format!("Welcome to the zircond test network, {}", nick)));
                             send!(client; Respond::to(&host.clone(), &nick).your_host("Your host is zircond, running version 0.01".to_owned()));
                             send!(client; Respond::to(&host.clone(), &nick).motd_start());
-                            send!(client; Respond::to(&host.clone(), &nick).motd(r"Zircon IRCd".to_owned()));
+                            send!(client; Respond::to(&host.clone(), &nick).motd(r"Zircon IRCd"));
                             send!(client; Respond::to(&host.clone(), &nick).motd_end());
                         }
 
