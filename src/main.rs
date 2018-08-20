@@ -3,6 +3,7 @@
 mod message;
 mod parser;
 mod server;
+
 use server::Server;
 
 fn main() {
