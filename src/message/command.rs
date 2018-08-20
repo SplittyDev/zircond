@@ -8,6 +8,7 @@ pub enum IrcMessageCommand {
 
     // Channels
     Join(String),
+    Who(String),
 
     // Misc
     Ping(String),

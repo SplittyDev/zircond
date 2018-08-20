@@ -161,6 +161,10 @@ impl IrcMessageParser {
                     let channel = extract!(parameters; JOIN 0 => REQ "channel name");
                     IrcMessageCommand::Join(channel)
                 }
+                "WHO" => {
+                    let channel = extract!(parameters; WHO 0 => REQ "channel name");
+                    IrcMessageCommand::Who(channel)
+                }
                 "PING" => {
                     let challenge = extract!(parameters; JOIN 0 => REQ "challenge");
                     IrcMessageCommand::Ping(challenge)   

@@ -6,27 +6,9 @@ pub type Shared<T> = Arc<RwLock<T>>;
 pub type SharedVec<T> = Shared<Vec<T>>;
 
 pub struct ServerState {
-    channels: SharedVec<Channel>,
+    channels: SharedVec<Shared<Channel>>,
     clients: SharedVec<Arc<ClientState>>,
     users: SharedVec<Shared<User>>,
-}
-
-macro_rules! impl_read {
-    ($name:ident: $fn:ident -> $rettype:ty) => {
-        pub fn $name<F, R>(&self, f: F) -> R where F: (Fn(&$rettype) -> R) {
-            f(&*self.$fn.clone().read().unwrap())
-        }
-    };
-}
-
-macro_rules! impl_write {
-    ($name:ident: $fn:ident -> $rettype:ty) => {
-        pub fn $name<F, R>(&self, f: F) -> R where F: (Fn(&mut $rettype) -> R) {
-            let tmp = self.$fn.clone();
-            let mut tmp = tmp.write().unwrap();
-            f(&mut *tmp)
-        }
-    };
 }
 
 impl ServerState {
@@ -40,12 +22,12 @@ impl ServerState {
         }
     }
 
-    pub fn channels(&self) -> SharedVec<Channel> {
+    pub fn channels(&self) -> SharedVec<Shared<Channel>> {
         self.channels.clone()
     }
 
-    impl_read!(read_channels: channels -> Vec<Channel>);
-    impl_write!(write_channels: channels -> Vec<Channel>);
+    impl_read!(read_channels: channels -> Vec<Shared<Channel>>);
+    impl_write!(write_channels: channels -> Vec<Shared<Channel>>);
 
     pub fn clients(&self) -> SharedVec<Arc<ClientState>> {
         self.clients.clone()
@@ -64,5 +46,17 @@ impl ServerState {
     pub fn add_client(&self, client: Arc<ClientState>) {
         let mut w = self.clients.write().unwrap();
         w.push(client);
+    }
+
+    pub fn get_channel(&self, channel_name: &str) -> Option<Shared<Channel>> {
+        self.read_channels(|channels| {
+            for channel in channels {
+                let channel_x = channel.read().unwrap();
+                if channel_x.name == channel_name {
+                    return Some(channel.clone());
+                }
+            }
+            None
+        })
     }
 }

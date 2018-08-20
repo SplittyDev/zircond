@@ -3,7 +3,6 @@ use std::net::{TcpListener};
 use std::thread;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::ops::DerefMut;
 use crate::message::{IrcMessageRequest, IrcMessageCommand, Respond};
 use super::{User, Channel, ServerState, ClientState};
 
@@ -117,7 +116,7 @@ impl Server {
                             state.write_channels(|channels| {
 
                                 // Test whether the channel already exists
-                                if !channels.iter().any(|channel| channel.name == channel_name) {
+                                if !channels.iter().any(|channel| channel.read().unwrap().name == channel_name) {
 
                                     // Create the new channel
                                     let channel = Channel::new(channel_name.clone());
@@ -126,12 +125,29 @@ impl Server {
                                     channel.join_user(client_state.user());
 
                                     // Add the channel the list
-                                    channels.push(channel);
+                                    channels.push(Arc::new(RwLock::new(channel)));
                                 }
                             });
 
                             // Send the join acknowledgement to the user
                             send!(client_state; Respond::to(&host.clone(), &nick).join(channel_name));
+                        }
+
+                        IrcMessageCommand::Who(channel_name) => {
+
+                            // Find channel
+                            if let Some(channel) = state.get_channel(&channel_name) {
+
+                                // List users
+                                channel.read().unwrap().read_users(|users| {
+                                    for user in users {
+                                        let user = user.read().unwrap();
+                                        send!(client_state; Respond::to(&host.clone(), &nick).names_reply(&channel_name, &user.nickname()))
+                                    }
+                                });
+                                
+                                send!(client_state; Respond::to(&host.clone(), &nick).names_end(&channel_name));
+                            }
                         }
 
                         IrcMessageCommand::Ping(challenge) => {

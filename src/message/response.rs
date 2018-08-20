@@ -41,6 +41,20 @@ impl<'a> ResponseBuilder<'a> {
         self
     }
 
+    pub fn names_reply(mut self, channel: &str, nickname: &str) -> Self {
+        self.code = Some("353");
+        self.parameters.push(format!("= {}", channel));
+        self.parameters.push(format!("@{}", nickname));
+        self
+    }
+
+    pub fn names_end(mut self, channel: &str) -> Self {
+        self.code = Some("366");
+        self.parameters.push(channel.to_owned());
+        self.parameters.push("End of /NAMES list.".to_owned());
+        self
+    }
+
     pub fn motd_start(mut self) -> Self {
         self.auto_insert_trailing_separator = false;
         self.code = Some("375");

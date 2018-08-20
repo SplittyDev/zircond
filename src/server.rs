@@ -1,3 +1,24 @@
+#[macro_use]
+mod macros {
+    macro_rules! impl_read {
+        ($name:ident: $fn:ident -> $rettype:ty) => {
+            pub fn $name<F, R>(&self, f: F) -> R where F: (Fn(&$rettype) -> R) {
+                f(&*self.$fn.clone().read().unwrap())
+            }
+        };
+    }
+
+    macro_rules! impl_write {
+        ($name:ident: $fn:ident -> $rettype:ty) => {
+            pub fn $name<F, R>(&self, f: F) -> R where F: (Fn(&mut $rettype) -> R) {
+                let tmp = self.$fn.clone();
+                let mut tmp = tmp.write().unwrap();
+                f(&mut *tmp)
+            }
+        };
+    }
+}
+
 mod user;
 mod channel;
 mod server_state;

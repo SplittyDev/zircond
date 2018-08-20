@@ -15,6 +15,8 @@ impl Channel {
         }
     }
 
+    impl_read!(read_users: users -> Vec<Arc<RwLock<User>>>);
+
     pub fn join_user(&self, user: Arc<RwLock<User>>) {
         let mut w = self.users.write().unwrap();
         w.deref_mut().push(user);
