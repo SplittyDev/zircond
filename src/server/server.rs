@@ -10,7 +10,7 @@ use super::{User, Channel, ServerState, ClientState};
 pub struct Server {
     host: String,
     port: u16,
-    state: ServerState,
+    state: Arc<ServerState>,
 }
 
 impl Server {
@@ -18,7 +18,7 @@ impl Server {
         Self {
             host: host.unwrap_or_else(|| "127.0.0.1".to_owned()),
             port: port.unwrap_or(6667),
-            state: ServerState::new(),
+            state: Arc::new(ServerState::new()),
         }
     }
 
@@ -40,24 +40,19 @@ impl Server {
         for client in listener.incoming() {
 
             // Get shared references important stuff
-            let user_list = self.state.users();
-            let channel_list = self.state.channels();
             let host = Arc::new(self.host.clone());
             let client = client.unwrap();
+            let state = self.state.clone();
 
             // Create a new user for this client
             let user = User::new(next_user_id);
             let user = Arc::new(RwLock::new(user));
             next_user_id += 1;
 
-            // Add the new user to the user list
-            {
-                let mut w = user_list.write().unwrap();
-                w.deref_mut().push(user.clone());
-            }
-
             // Create client state
             let client_state = Arc::new(ClientState::new(client, user));
+
+            // Add client to server state
             self.state.add_client(client_state.clone());
 
             // Spawn a thread to handle the client
@@ -118,21 +113,22 @@ impl Server {
 
                         IrcMessageCommand::Join(channel_name) => {
 
-                            // Get the writeable channel list
-                            let mut w = channel_list.write().unwrap();
+                            // Sync state
+                            state.write_channels(|channels| {
 
-                            // Test whether the channel already exists
-                            if !w.deref_mut().iter().any(|channel| channel.name == channel_name) {
+                                // Test whether the channel already exists
+                                if !channels.iter().any(|channel| channel.name == channel_name) {
 
-                                // Create the new channel
-                                let channel = Channel::new(channel_name.clone());
+                                    // Create the new channel
+                                    let channel = Channel::new(channel_name.clone());
 
-                                // Add the user to the channel
-                                channel.join_user(client_state.user());
+                                    // Add the user to the channel
+                                    channel.join_user(client_state.user());
 
-                                // Add the channel the list
-                                w.deref_mut().push(channel);
-                            }
+                                    // Add the channel the list
+                                    channels.push(channel);
+                                }
+                            });
 
                             // Send the join acknowledgement to the user
                             send!(client_state; Respond::to(&host.clone(), &nick).join(channel_name));
