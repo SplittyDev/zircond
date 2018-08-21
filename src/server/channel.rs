@@ -1,32 +1,44 @@
-use std::sync::{Arc, RwLock};
-use std::ops::DerefMut;
-use super::User;
+pub struct ChannelUserInfo {
+    client_id: usize,
+}
+
+impl ChannelUserInfo {
+    pub fn new(client_id: usize) -> Self {
+        Self {
+            client_id
+        }
+    }
+
+    pub fn client_id(&self) -> usize {
+        self.client_id
+    }
+}
 
 pub struct Channel {
     pub name: String,
-    users: Arc<RwLock<Vec<Arc<RwLock<User>>>>>,
+    users: Vec<ChannelUserInfo>,
 }
 
 impl Channel {
     pub fn new(name: String) -> Self {
         Self {
             name,
-            users: Arc::new(RwLock::new(Vec::new())),
+            users: Vec::new(),
         }
     }
 
-    impl_read!(read_users: users -> Vec<Arc<RwLock<User>>>);
-
-    pub fn join_user(&self, user: Arc<RwLock<User>>) {
-        let mut w = self.users.write().unwrap();
-        w.deref_mut().push(user);
+    pub fn users(&self) -> &Vec<ChannelUserInfo> {
+        &self.users
     }
 
-    pub fn part_user(&self, id: usize) {
-        let mut w = self.users.write().unwrap();
-        let user_list = w.deref_mut();
-        user_list.iter().position(|user| {
-            user.read().unwrap().id == id
-        }).map(|i| user_list.remove(i));
+    pub fn join_user(&mut self, client_id: usize) {
+        let user_info = ChannelUserInfo::new(client_id);
+        self.users.push(user_info);
+    }
+
+    pub fn part_user(&mut self, client_id: usize) {
+        self.users.iter().position(|user| {
+            user.client_id() == client_id
+        }).map(|i| self.users.remove(i));
     }
 }

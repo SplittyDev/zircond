@@ -7,7 +7,7 @@ pub type SharedVec<T> = Shared<Vec<T>>;
 
 pub struct ServerState {
     channels: SharedVec<Shared<Channel>>,
-    clients: SharedVec<Arc<ClientState>>,
+    clients: Vec<ClientState>,
     users: SharedVec<Shared<User>>,
 }
 
@@ -17,7 +17,7 @@ impl ServerState {
     pub fn new() -> Self {
         Self {
             channels: Arc::new(RwLock::new(Vec::new())),
-            clients: Arc::new(RwLock::new(Vec::new())),
+            clients: Vec::new(),
             users: Arc::new(RwLock::new(Vec::new())),
         }
     }
@@ -29,12 +29,9 @@ impl ServerState {
     impl_read!(read_channels: channels -> Vec<Shared<Channel>>);
     impl_write!(write_channels: channels -> Vec<Shared<Channel>>);
 
-    pub fn clients(&self) -> SharedVec<Arc<ClientState>> {
-        self.clients.clone()
+    pub fn clients(&self) -> &Vec<ClientState> {
+        &self.clients
     }
-
-    impl_read!(read_clients: clients -> Vec<Arc<ClientState>>);
-    impl_write!(write_clients: clients -> Vec<Arc<ClientState>>);
 
     pub fn users(&self) -> SharedVec<Shared<User>> {
         self.users.clone()
@@ -43,9 +40,8 @@ impl ServerState {
     impl_read!(read_users: users -> Vec<Shared<User>>);
     impl_write!(write_users: users -> Vec<Shared<User>>);
 
-    pub fn add_client(&self, client: Arc<ClientState>) {
-        let mut w = self.clients.write().unwrap();
-        w.push(client);
+    pub fn add_client(&mut self, client: ClientState) {
+        self.clients.push(client);
     }
 
     pub fn get_channel(&self, channel_name: &str) -> Option<Shared<Channel>> {

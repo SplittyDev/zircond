@@ -21,14 +21,20 @@ mod macros {
 
 mod user;
 mod channel;
+mod user_list;
+mod channel_list;
 mod server_state;
 mod client_state;
+mod action;
 mod server;
 
 pub use self::user::User;
 pub use self::channel::Channel;
+pub use self::user_list::UserList;
+pub use self::channel_list::ChannelList;
 pub use self::server_state::ServerState;
 pub use self::client_state::ClientState;
+pub use self::action::IrcAction;
 pub use self::server::Server;
 
 #[cfg(test)]
