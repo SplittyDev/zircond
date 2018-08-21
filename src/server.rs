@@ -1,30 +1,7 @@
-#[macro_use]
-mod macros {
-    macro_rules! impl_read {
-        ($name:ident: $fn:ident -> $rettype:ty) => {
-            pub fn $name<F, R>(&self, f: F) -> R where F: (Fn(&$rettype) -> R) {
-                f(&*self.$fn.clone().read().unwrap())
-            }
-        };
-    }
-
-    macro_rules! impl_write {
-        ($name:ident: $fn:ident -> $rettype:ty) => {
-            pub fn $name<F, R>(&self, f: F) -> R where F: (Fn(&mut $rettype) -> R) {
-                let tmp = self.$fn.clone();
-                let mut tmp = tmp.write().unwrap();
-                f(&mut *tmp)
-            }
-        };
-    }
-}
-
 mod user;
 mod channel;
 mod user_list;
 mod channel_list;
-mod server_state;
-mod client_state;
 mod action;
 mod server;
 
@@ -32,8 +9,6 @@ pub use self::user::User;
 pub use self::channel::Channel;
 pub use self::user_list::UserList;
 pub use self::channel_list::ChannelList;
-pub use self::server_state::ServerState;
-pub use self::client_state::ClientState;
 pub use self::action::IrcAction;
 pub use self::server::Server;
 

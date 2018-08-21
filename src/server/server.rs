@@ -125,6 +125,7 @@ impl Server {
         for (mut client, client_id, action) in recv {
 
             // Handle the action
+            #[allow(unreachable_patterns)]
             match action {
 
                 IrcAction::UserConnect() => {
