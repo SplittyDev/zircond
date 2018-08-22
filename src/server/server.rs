@@ -159,11 +159,11 @@ impl Server {
                             env!("CARGO_PKG_VERSION_PATCH"),
                             option_env!("CARGO_PKG_VERSION_PRE").unwrap_or("")
                         );
-                        send!(client; Respond::to(&self.host, &user.nickname()).welcome(format!("Welcome to the zircond test network, {}", user.nickname())));
-                        send!(client; Respond::to(&self.host, &user.nickname()).your_host(format!("Your host is zircond, running version {}", &crate_version)));
-                        send!(client; Respond::to(&self.host, &user.nickname()).motd_start());
-                        send!(client; Respond::to(&self.host, &user.nickname()).motd(&format!("Zircon IRCd v{}", &crate_version)));
-                        send!(client; Respond::to(&self.host, &user.nickname()).motd_end());
+                        send!(client; Respond::to(&self.host, &user.nickname(), &user.nickname()).welcome(format!("Welcome to the zircond test network, {}", user.nickname())));
+                        send!(client; Respond::to(&self.host, &user.nickname(), &user.nickname()).your_host(format!("Your host is zircond, running version {}", &crate_version)));
+                        send!(client; Respond::to(&self.host, &user.nickname(), &user.nickname()).motd_start());
+                        send!(client; Respond::to(&self.host, &user.nickname(), &user.nickname()).motd(&format!("Zircon IRCd v{}", &crate_version)));
+                        send!(client; Respond::to(&self.host, &user.nickname(), &user.nickname()).motd_end());
                     }
                 }
 
@@ -176,7 +176,8 @@ impl Server {
                         if self.channels.find(&channel_name).is_none() {
 
                             // Create a new channel
-                            let channel = Channel::new(channel_name.clone());
+                            let mut channel = Channel::new(channel_name.clone());
+                            channel.topic = Some("Test channel.".to_owned());
 
                             // Add the new channel to the channel list
                             self.channels.add(channel);
@@ -189,7 +190,14 @@ impl Server {
                         channel.join_user(client_id);
 
                         // Send join acknowledgement to the user
-                        send!(client; Respond::to(&user.nickname(), &user.nickname()).join(channel_name));
+                        send!(client; Respond::to(&user.nickname(), &user.nickname(), &user.nickname()).join(channel_name.clone()));
+
+                        // Test whether the channel has a topic
+                        if let Some(topic) = &channel.topic {
+
+                            // Tell the client about the topic
+                            send!(client; Respond::to(&user.nickname(), &channel_name, &user.nickname()).topic(topic.clone()));
+                        }
                     }
                 }
 
@@ -208,12 +216,12 @@ impl Server {
                                 if let Some(channel_user) = self.users.find(user_info.client_id()) {
 
                                     // Tell the client about the user
-                                    send!(client; Respond::to(&self.host, &user.nickname()).names_reply(&channel_name, &channel_user.nickname()))
+                                    send!(client; Respond::to(&self.host, &user.nickname(), &user.nickname()).names_reply(&channel_name, &channel_user.nickname()))
                                 }
                             }
 
                             // Mark the end of the user list
-                            send!(client; Respond::to(&self.host, &user.nickname()).names_end(&channel_name));
+                            send!(client; Respond::to(&self.host, &user.nickname(), &user.nickname()).names_end(&channel_name));
                         }
                     }
                 }
@@ -224,7 +232,7 @@ impl Server {
                     if let Some(user) = self.users.find(client_id) {
 
                         // Respond to ping
-                        send!(client; Respond::to(&self.host, &user.nickname()).pong(id));
+                        send!(client; Respond::to(&self.host, &user.nickname(), &user.nickname()).pong(id));
                     }
                 }
 

@@ -16,6 +16,7 @@ impl ChannelUserInfo {
 
 pub struct Channel {
     pub name: String,
+    pub topic: Option<String>,
     users: Vec<ChannelUserInfo>,
 }
 
@@ -23,6 +24,7 @@ impl Channel {
     pub fn new(name: String) -> Self {
         Self {
             name,
+            topic: None,
             users: Vec::new(),
         }
     }
