@@ -189,7 +189,7 @@ impl Server {
                         channel.join_user(client_id);
 
                         // Send join acknowledgement to the user
-                        send!(client; Respond::to(&self.host, &user.nickname()).join(channel_name));
+                        send!(client; Respond::to(&user.nickname(), &user.nickname()).join(channel_name));
                     }
                 }
 
