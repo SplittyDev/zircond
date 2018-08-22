@@ -1,5 +1,6 @@
 #![feature(uniform_paths)]
 
+mod protocol;
 mod message;
 mod parser;
 mod server;
