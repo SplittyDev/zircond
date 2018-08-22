@@ -152,10 +152,17 @@ impl Server {
                         user.set_names(username, realname);
 
                         // Send the welcome sequence
+                        let crate_version = format!(
+                            "{}.{}.{}{}",
+                            env!("CARGO_PKG_VERSION_MAJOR"),
+                            env!("CARGO_PKG_VERSION_MINOR"),
+                            env!("CARGO_PKG_VERSION_PATCH"),
+                            option_env!("CARGO_PKG_VERSION_PRE").unwrap_or("")
+                        );
                         send!(client; Respond::to(&self.host, &user.nickname()).welcome(format!("Welcome to the zircond test network, {}", user.nickname())));
-                        send!(client; Respond::to(&self.host, &user.nickname()).your_host("Your host is zircond, running version 0.01".to_owned()));
+                        send!(client; Respond::to(&self.host, &user.nickname()).your_host(format!("Your host is zircond, running version {}", &crate_version)));
                         send!(client; Respond::to(&self.host, &user.nickname()).motd_start());
-                        send!(client; Respond::to(&self.host, &user.nickname()).motd(r"Zircon IRCd"));
+                        send!(client; Respond::to(&self.host, &user.nickname()).motd(&format!("Zircon IRCd v{}", &crate_version)));
                         send!(client; Respond::to(&self.host, &user.nickname()).motd_end());
                     }
                 }
