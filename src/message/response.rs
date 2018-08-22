@@ -1,3 +1,5 @@
+use crate::protocol::*;
+
 pub struct Respond;
 
 impl<'a> Respond {
@@ -30,26 +32,26 @@ impl<'a> ResponseBuilder<'a> {
     }
 
     pub fn welcome(mut self, message: String) -> Self {
-        self.code = Some("001");
+        self.code = Some(RPL_WELCOME);
         self.parameters.push(message);
         self
     }
 
     pub fn your_host(mut self, message: String) -> Self {
-        self.code = Some("002");
+        self.code = Some(RPL_YOURHOST);
         self.parameters.push(message);
         self
     }
 
     pub fn names_reply(mut self, channel: &str, nickname: &str) -> Self {
-        self.code = Some("353");
+        self.code = Some(RPL_NAMREPLY);
         self.parameters.push(format!("= {}", channel));
         self.parameters.push(format!("@{}", nickname));
         self
     }
 
     pub fn names_end(mut self, channel: &str) -> Self {
-        self.code = Some("366");
+        self.code = Some(RPL_ENDOFNAMES);
         self.parameters.push(channel.to_owned());
         self.parameters.push("End of /NAMES list.".to_owned());
         self
@@ -57,20 +59,20 @@ impl<'a> ResponseBuilder<'a> {
 
     pub fn motd_start(mut self) -> Self {
         self.auto_insert_trailing_separator = false;
-        self.code = Some("375");
+        self.code = Some(RPL_MOTDSTART);
         self.parameters.push(format!(":{} Message of the day", self.host));
         self
     }
 
     pub fn motd(mut self, message: &str) -> Self {
         self.auto_insert_trailing_separator = false;
-        self.code = Some("372");
+        self.code = Some(RPL_MOTD);
         self.parameters.push(format!(":- {}", message));
         self
     }
 
     pub fn motd_end(mut self) -> Self {
-        self.code = Some("376");
+        self.code = Some(RPL_ENDOFMOTD);
         self.parameters.push("End of MOTD.".to_owned());
         self
     }
