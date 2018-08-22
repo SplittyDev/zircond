@@ -2,7 +2,7 @@ macro_rules! define_numerics {
     ($($code:expr => $name:ident ,)+) => {
         $(
             #[allow(unused)]
-            const $name: &'static str = $code;
+            pub const $name: &'static str = $code;
         )+
     };
 }
