@@ -219,7 +219,7 @@ impl Server {
                                     // "=": public
                                     // "@": secret (+s)
                                     // "*": private (+p)
-                                    let channel_mode = '=';
+                                    let channel_mode = "=";
 
                                     // Tell the client about the user
                                     send!(client; Respond::to(&self.host, &user.nickname(), &user.nickname()).names_reply(&channel_name, channel_mode, &channel_user.nickname()))
