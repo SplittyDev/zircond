@@ -182,7 +182,6 @@ impl Server {
 
                             // Create a new channel
                             let mut channel = Channel::new(channel_name.clone());
-                            channel.topic = Some("Test channel.".to_owned());
 
                             // Add the new channel to the channel list
                             self.channels.add(channel);
@@ -207,6 +206,11 @@ impl Server {
 
                         // Iterate over all users in the channel
                         for other_client in channel.users() {
+
+                            // Skip this user if it is the current user
+                            if other_client.client_id() == client_id {
+                                continue;
+                            }
 
                             // Find user by user id
                             if let Some(other_user) = self.users.find_mut(other_client.client_id()) {
