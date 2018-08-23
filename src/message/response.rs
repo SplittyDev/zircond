@@ -80,6 +80,13 @@ impl<'a> ResponseBuilder<'a> {
         self
     }
 
+    pub fn privmsg(mut self, target: String, message: String) -> Self {
+        self.command = CommandType::Name("PRIVMSG");
+        self.parameters.push(target);
+        self.parameters.push(message);
+        self
+    }
+
     pub fn pong(mut self, challenge: String) -> Self {
         self.command = CommandType::Name("PONG");
         self.parameters.push(challenge);

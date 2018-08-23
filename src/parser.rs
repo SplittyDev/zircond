@@ -161,6 +161,11 @@ impl IrcMessageParser {
                     let channel = extract!(parameters; JOIN 0 => REQ "channel name");
                     IrcMessageCommand::Join(channel)
                 }
+                "PRIVMSG" => {
+                    let target = extract!(parameters; PRIVMSG 0 => REQ "target");
+                    let message = extract!(parameters; PRIVMSG 1 => REQ "message");
+                    IrcMessageCommand::Privmsg(target, message)
+                }
                 "WHO" => {
                     let channel = extract!(parameters; WHO 0 => REQ "channel name");
                     IrcMessageCommand::Who(channel)

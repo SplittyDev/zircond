@@ -103,6 +103,10 @@ impl Server {
                                 sender.send((client, client_id, IrcAction::UserJoinChannel(channel))).unwrap()
                             }
 
+                            IrcMessageCommand::Privmsg(target, message) => {
+                                sender.send((client, client_id, IrcAction::Privmsg(target, message))).unwrap()
+                            }
+
                             IrcMessageCommand::Who(channel) => {
                                 sender.send((client, client_id, IrcAction::ChannelListUsers(channel))).unwrap();
                             }
@@ -243,6 +247,39 @@ impl Server {
                             // Mark the end of the user list
                             send!(client; Respond::to(&self.host, &user.nickname()).names_end(&channel_name));
                         }
+                    }
+                }
+
+                IrcAction::Privmsg(target, message) => {
+
+                    // Find the current user
+                    let user_nick = self.users.find(client_id).unwrap().nickname();
+
+                    // Determine whether the target is a user or a channel
+                    if target.starts_with('#') {
+
+                        // Find the channel
+                        if let Some(channel) = self.channels.find(&target) {
+
+                            // Find all users in the channel
+                            for other_user_info in channel.users() {
+
+                                // Skip this user if it is the current user
+                                if other_user_info.client_id() == client_id {
+                                    continue;
+                                }
+
+                                // Find the user
+                                if let Some(other_user) = self.users.find_mut(other_user_info.client_id()) {
+
+                                    // Relay the private message to the other user
+                                    let nick = other_user.nickname();
+                                    send!(other_user.stream(); Respond::to(&user_nick, &nick).privmsg(target.clone(), message.clone()));
+                                }
+                            }
+                        }
+                    } else {
+                        println!("Unimplemented: PRIVMSG from user to user");
                     }
                 }
 

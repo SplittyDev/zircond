@@ -39,8 +39,8 @@ pub enum IrcAction {
 
     /// Private message
     /// 
-    /// * `0` - Sender
-    /// * `1` - Recipient
+    /// * `0` - Target
+    /// * `1` - Message
     Privmsg(String, String),
 
     //
