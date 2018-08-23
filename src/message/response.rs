@@ -9,13 +9,12 @@ pub enum CommandType {
 pub struct Respond;
 
 impl<'a> Respond {
-    pub fn to(host: &'a str, target: &'a str, nick: &'a str) -> ResponseBuilder<'a> {
-        ResponseBuilder::new(host, target, nick)
+    pub fn to(host: &'a str, target: &'a str) -> ResponseBuilder<'a> {
+        ResponseBuilder::new(host, target)
     }
 }
 
 pub struct ResponseBuilder<'a> {
-    nick: &'a str,
     source: &'a str,
     target: &'a str,
     command: CommandType,
@@ -24,9 +23,8 @@ pub struct ResponseBuilder<'a> {
 }
 
 impl<'a> ResponseBuilder<'a> {
-    pub fn new(source: &'a str, target: &'a str, nick: &'a str) -> Self {
+    pub fn new(source: &'a str, target: &'a str) -> Self {
         ResponseBuilder {
-            nick,
             source,
             target,
             command: CommandType::None,
