@@ -129,7 +129,7 @@ impl Server {
             match action {
 
                 IrcAction::UserConnect() => {
-                    let user = User::new(client_id);
+                    let user = User::new(client_id, client);
                     self.users.add(user);
                 }
                 
@@ -197,6 +197,18 @@ impl Server {
 
                             // Tell the client about the topic
                             send!(client; Respond::to(&user.nickname(), &channel_name, &user.nickname()).topic(topic.clone()));
+                        }
+
+                        // Iterate over all users in the channel
+                        for other_client in channel.users() {
+
+                            // Find user by user id
+                            if let Some(other_user) = self.users.find_mut(other_client.client_id()) {
+
+                                // Tell the user's client about the join
+                                let nick = other_user.nickname();
+                                send!(other_user.stream(); Respond::to(&nick, &nick, &nick).join(channel_name.clone()));
+                            }
                         }
                     }
                 }

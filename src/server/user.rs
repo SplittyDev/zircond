@@ -1,19 +1,27 @@
+use std::net::TcpStream;
+
 #[derive(Debug)]
 pub struct User {
     pub id: usize,
     nickname: Option<String>,
     username: Option<String>,
     realname: Option<String>,
+    stream: TcpStream,
 }
 
 impl User {
-    pub fn new(id: usize) -> User {
+    pub fn new(id: usize, stream: TcpStream) -> User {
         Self {
-            id: id,
+            id,
             nickname: None,
             username: None,
             realname: None,
+            stream,
         }
+    }
+
+    pub fn stream(&mut self) -> &mut TcpStream {
+        &mut self.stream
     }
 
     pub fn nickname(&self) -> String {
