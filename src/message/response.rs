@@ -89,6 +89,7 @@ impl<'a> ResponseBuilder<'a> {
 
     pub fn pong(mut self, challenge: String) -> Self {
         self.command = CommandType::Name("PONG");
+        self.parameters.push(self.source.to_owned());
         self.parameters.push(challenge);
         self
     }
