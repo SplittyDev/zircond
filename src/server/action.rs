@@ -51,4 +51,7 @@ pub enum IrcAction {
     /// 
     /// * `0` - Ping id
     Pong(String),
+
+    /// Disconnect
+    Disconnect(),
 }

@@ -82,6 +82,12 @@ impl Server {
                         let mut line = String::new();
                         reader.read_line(&mut line).unwrap();
 
+                        // Test for EOF
+                        if line.is_empty() {
+                            sender.send((client, client_id, IrcAction::Disconnect())).unwrap();
+                            break;
+                        }
+
                         // Debug
                         print!("[{:?}] {}", addr, line);
 
@@ -118,6 +124,9 @@ impl Server {
                             com => println!("Unhandled command: {:?}", com),
                         }
                     }
+
+                    // Kill the client
+                    client.shutdown(std::net::Shutdown::Both).unwrap();
                 });
 
                 // Keep track of the thread handle
@@ -312,6 +321,15 @@ impl Server {
 
                         // Respond to ping
                         send!(client; Respond::to(&self.host, &user.nickname()).pong(id));
+                    }
+                }
+
+                IrcAction::Disconnect() => {
+
+                    // Disconnect the user
+                    if let Some(user) = self.users.find(client_id) {
+                        println!("Disconnected: {}", user.nickname());
+                        self.users.disconnect(client_id);
                     }
                 }
 

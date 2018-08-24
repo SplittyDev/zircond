@@ -22,4 +22,8 @@ impl UserList {
     pub fn find_mut(&mut self, client_id: usize) -> Option<&mut User> {
         self.users.iter_mut().find(|user| user.id == client_id)
     }
+
+    pub fn disconnect(&mut self, client_id: usize) -> bool {
+        self.users.iter().position(|user| user.id == client_id).map(|user| self.users.remove(user)).is_some()
+    }
 }
