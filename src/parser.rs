@@ -71,7 +71,7 @@ impl IrcMessageParser {
                             _ => command_name.push(chr),
                         }
                     },
-                    None => panic!("Unexpected end of command.")
+                    None => (),
                 }
             }
             command_name
