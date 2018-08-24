@@ -64,14 +64,13 @@ impl IrcMessageParser {
             let mut command_name = String::new();
             command_name.push(current_char);
             loop {
-                match chars.next() {
-                    Some(chr) => {
-                        match chr {
-                            ' ' => break,
-                            _ => command_name.push(chr),
-                        }
-                    },
-                    None => (),
+                if let Some(chr) = chars.next() {
+                    match chr {
+                        ' ' => break,
+                        _ => command_name.push(chr),
+                    }
+                } else {
+                    break;
                 }
             }
             command_name
