@@ -25,14 +25,18 @@ impl Server {
     }
 
     pub fn listen(&mut self) {
-        let mut threads = Vec::new();
 
-        // Macro for simple server-to-client communication
-        macro_rules! send {
-            ($writer:expr; $variant:expr) => (
-                $writer.write_all(format!("{}\r\n", $variant.to_string()).as_ref()).unwrap()
-            );
-        }
+        // Get crate version
+        let crate_version = format!(
+            "{}.{}.{}{}",
+            env!("CARGO_PKG_VERSION_MAJOR"),
+            env!("CARGO_PKG_VERSION_MINOR"),
+            env!("CARGO_PKG_VERSION_PATCH"),
+            option_env!("CARGO_PKG_VERSION_PRE").unwrap_or("")
+        );
+
+        // Create thread collection
+        let mut threads = Vec::new();
 
         // Create asynchronous channel
         let (sender, recv) = channel();
@@ -134,8 +138,25 @@ impl Server {
             }
         });
 
+        // Macro for simple server-to-client communication
+        macro_rules! send {
+            ($writer:expr; $variant:expr) => (
+                $writer.write_all(format!("{}\r\n", $variant.to_string()).as_ref()).unwrap()
+            );
+        }
+
         // Receive actions
         for (mut client, client_id, action) in recv {
+
+            // Provide easy access to the sender of the action
+            macro_rules! my_user {
+                (r) => {
+                    self.users.find(client_id).unwrap()
+                };
+                (rw) => {
+                    self.users.find_mut(client_id).unwrap()
+                }
+            }
 
             // Handle the action
             #[allow(unreachable_patterns)]
@@ -148,104 +169,91 @@ impl Server {
                 
                 IrcAction::UserSetNick(nickname) => {
 
-                    // Find the user
-                    if let Some(user) = self.users.find_mut(client_id) {
-
-                        // Set the nickname
-                        user.set_nickname(nickname);
-                    }
+                    // Set the nickname
+                    my_user!(rw).set_nickname(nickname);
                 }
 
                 IrcAction::UserSetNames(username, realname) => {
 
-                    // Find the user
-                    if let Some(user) = self.users.find_mut(client_id) {
+                    // Set username and realname
+                    my_user!(rw).set_names(username, realname);
 
-                        // Set username and realname
-                        user.set_names(username, realname);
+                    // Get the nickname
+                    let nick = my_user!(r).nickname();
 
-                        // Send the welcome sequence
-                        let crate_version = format!(
-                            "{}.{}.{}{}",
-                            env!("CARGO_PKG_VERSION_MAJOR"),
-                            env!("CARGO_PKG_VERSION_MINOR"),
-                            env!("CARGO_PKG_VERSION_PATCH"),
-                            option_env!("CARGO_PKG_VERSION_PRE").unwrap_or("")
-                        );
-                        let nick = user.nickname();
-                        send!(client; Respond::to(&self.host, &nick).welcome(format!("Welcome to the zircond test network, {}", user.nickname())));
-                        send!(client; Respond::to(&self.host, &nick).your_host(format!("Your host is zircond, running version {}", &crate_version)));
-                        send!(client; Respond::to(&self.host, &nick).motd_start());
-                        send!(client; Respond::to(&self.host, &nick).motd(&format!("Zircon IRCd v{}", &crate_version)));
-                        send!(client; Respond::to(&self.host, &nick).motd_end());
-                    }
+                    // Send the welcome sequence
+                    send!(client; Respond::to(&self.host, &nick).welcome(format!("Welcome to the zircond test network, {}", nick)));
+                    send!(client; Respond::to(&self.host, &nick).your_host(format!("Your host is zircond, running version {}", &crate_version)));
+                    send!(client; Respond::to(&self.host, &nick).motd_start());
+                    send!(client; Respond::to(&self.host, &nick).motd(&format!("Zircon IRCd v{}", &crate_version)));
+                    send!(client; Respond::to(&self.host, &nick).motd_end());
                 }
 
                 IrcAction::UserJoinChannel(channel_name) => {
 
-                    // Find the user
-                    if let Some(user) = self.users.find(client_id) {
+                    // Get the current user
+                    let my_user = my_user!(r);
 
-                        // Test whether the channel already exists
-                        if self.channels.find(&channel_name).is_none() {
+                    // Test whether the channel already exists
+                    if self.channels.find(&channel_name).is_none() {
 
-                            // Create a new channel
-                            let channel = Channel::new(channel_name.clone());
+                        // Create a new channel
+                        let channel = Channel::new(channel_name.clone());
 
-                            // Add the new channel to the channel list
-                            self.channels.add(channel);
-                        }
+                        // Add the new channel to the channel list
+                        self.channels.add(channel);
+                    }
 
-                        // Find the channel
-                        let channel = self.channels.find(&channel_name).unwrap();
+                    // Find the channel
+                    let channel = self.channels.find(&channel_name).unwrap();
 
-                        // Add the user to the channel
-                        channel.join_user(client_id);
+                    // Add the user to the channel
+                    channel.join_user(client_id);
 
-                        // Send join acknowledgement to the user
-                        let nick = user.nickname();
-                        send!(client; Respond::to(&nick, &nick).join(channel_name.clone()));
+                    // Send join acknowledgement to the user
+                    let nick = my_user.nickname();
+                    send!(client; Respond::to(&nick, &nick).join(channel_name.clone()));
 
-                        // Test whether the channel has a topic
-                        if let Some(topic) = &channel.topic {
+                    // Test whether the channel has a topic
+                    if let Some(topic) = &channel.topic {
 
-                            // Tell the client about the topic
-                            send!(client; Respond::to(&nick, &channel_name).topic(topic.clone()));
-                        }
+                        // Tell the client about the topic
+                        send!(client; Respond::to(&nick, &channel_name).topic(topic.clone()));
+                    }
 
-                        // Send user list
-                        // Iterate over all users in the channel
-                        for user_info in channel.users() {
+                    // Iterate over all users in the channel
+                    for user_info in channel.users() {
+                        
+                        // Find the user
+                        if let Some(channel_user) = self.users.find(user_info.client_id()) {
+
+                            // Get channel mode
+                            // "=": public
+                            // "@": secret (+s)
+                            // "*": private (+p)
+                            let channel_mode = "=";
                             
-                            // Find the user
-                            if let Some(channel_user) = self.users.find(user_info.client_id()) {
-                                // Get channel mode
-                                // "=": public
-                                // "@": secret (+s)
-                                // "*": private (+p)
-                                let channel_mode = "=";
-                                // Tell the client about the user
-                                send!(client; Respond::to(&self.host, &user.nickname()).names_reply(&channel_name, channel_mode, "", &channel_user.nickname()))
-                            }
+                            // Tell the client about the user
+                            send!(client; Respond::to(&self.host, &nick).names_reply(&channel_name, channel_mode, "", &channel_user.nickname()))
+                        }
+                    }
+
+                    // Mark the end of the user list    
+                    send!(client; Respond::to(&self.host, &nick).names_end(&channel_name));
+
+                    // Iterate over all users in the channel
+                    for other_client in channel.users() {
+
+                        // Skip this user if it is the current user
+                        if other_client.client_id() == client_id {
+                            continue;
                         }
 
-                        // Mark the end of the user list    
-                        send!(client; Respond::to(&self.host, &user.nickname()).names_end(&channel_name));
+                        // Find user by user id
+                        if let Some(other_user) = self.users.find_mut(other_client.client_id()) {
 
-                        // Iterate over all users in the channel
-                        for other_client in channel.users() {
-
-                            // Skip this user if it is the current user
-                            if other_client.client_id() == client_id {
-                                continue;
-                            }
-
-                            // Find user by user id
-                            if let Some(other_user) = self.users.find_mut(other_client.client_id()) {
-
-                                // Tell the user's client about the join
-                                send!(other_user.stream(); Respond::to(&nick, &nick).join(channel_name.clone()));
-                            }
+                            // Tell the user's client about the join
+                            send!(other_user.stream(); Respond::to(&nick, &nick).join(channel_name.clone()));
                         }
                     }
                 }
@@ -283,8 +291,8 @@ impl Server {
 
                 IrcAction::Privmsg(target, message) => {
 
-                    // Find the current user
-                    let user_nick = self.users.find(client_id).unwrap().nickname();
+                    // Get the nickname of the current user
+                    let user_nick = my_user!(r).nickname();
 
                     // Determine whether the target is a user or a channel
                     if target.starts_with('#') {
@@ -310,27 +318,23 @@ impl Server {
                             }
                         }
                     } else {
+
+                        // TODO: Implement
                         println!("Unimplemented: PRIVMSG from user to user");
                     }
                 }
 
                 IrcAction::Pong(id) => {
 
-                    // Find the user
-                    if let Some(user) = self.users.find(client_id) {
-
-                        // Respond to ping
-                        send!(client; Respond::to(&self.host, &user.nickname()).pong(id));
-                    }
+                    // Respond to ping
+                    send!(client; Respond::to(&self.host, &my_user!(r).nickname()).pong(id));
                 }
 
                 IrcAction::Disconnect() => {
 
                     // Disconnect the user
-                    if let Some(user) = self.users.find(client_id) {
-                        println!("Disconnected: {}", user.nickname());
-                        self.users.disconnect(client_id);
-                    }
+                    println!("Connection lost: {}", my_user!(r).nickname());
+                    self.users.disconnect(client_id);
                 }
 
                 _ => println!("Unimplemented action: {:?}", action)
