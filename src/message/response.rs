@@ -45,11 +45,11 @@ impl<'a> ResponseBuilder<'a> {
         self
     }
 
-    pub fn names_reply(mut self, channel_mode: &str, channel: &str, nickname: &str) -> Self {
+    pub fn names_reply(mut self, channel_mode: &str, channel: &str, user_mode: &str, nickname: &str) -> Self {
         self.command = CommandType::Code(RPL_NAMREPLY);
         self.parameters.push(channel.to_owned());
         self.parameters.push(channel_mode.to_owned());
-        self.parameters.push(format!("@{}", nickname));
+        self.parameters.push(format!("{}{}", user_mode, nickname));
         self
     }
 

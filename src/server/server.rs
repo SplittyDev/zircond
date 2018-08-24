@@ -181,7 +181,7 @@ impl Server {
                         if self.channels.find(&channel_name).is_none() {
 
                             // Create a new channel
-                            let mut channel = Channel::new(channel_name.clone());
+                            let channel = Channel::new(channel_name.clone());
 
                             // Add the new channel to the channel list
                             self.channels.add(channel);
@@ -204,6 +204,25 @@ impl Server {
                             send!(client; Respond::to(&nick, &channel_name).topic(topic.clone()));
                         }
 
+                        // Send user list
+                        // Iterate over all users in the channel
+                        for user_info in channel.users() {
+                            
+                            // Find the user
+                            if let Some(channel_user) = self.users.find(user_info.client_id()) {
+                                // Get channel mode
+                                // "=": public
+                                // "@": secret (+s)
+                                // "*": private (+p)
+                                let channel_mode = "=";
+                                // Tell the client about the user
+                                send!(client; Respond::to(&self.host, &user.nickname()).names_reply(&channel_name, channel_mode, "", &channel_user.nickname()))
+                            }
+                        }
+
+                        // Mark the end of the user list    
+                        send!(client; Respond::to(&self.host, &user.nickname()).names_end(&channel_name));
+
                         // Iterate over all users in the channel
                         for other_client in channel.users() {
 
@@ -216,7 +235,6 @@ impl Server {
                             if let Some(other_user) = self.users.find_mut(other_client.client_id()) {
 
                                 // Tell the user's client about the join
-                                let nick = other_user.nickname();
                                 send!(other_user.stream(); Respond::to(&nick, &nick).join(channel_name.clone()));
                             }
                         }
@@ -225,33 +243,33 @@ impl Server {
 
                 IrcAction::ChannelListUsers(channel_name) => {
 
-                    // Find the user
-                    if let Some(user) = self.users.find(client_id) {
+                    // // Find the user
+                    // if let Some(user) = self.users.find(client_id) {
 
-                        // Find the channel
-                        if let Some(channel) = self.channels.find(&channel_name) {
+                    //     // Find the channel
+                    //     if let Some(channel) = self.channels.find(&channel_name) {
 
-                            // Iterate over all users in the channel
-                            for user_info in channel.users() {
+                    //         // Iterate over all users in the channel
+                    //         for user_info in channel.users() {
                                 
-                                // Find the user
-                                if let Some(channel_user) = self.users.find(user_info.client_id()) {
+                    //             // Find the user
+                    //             if let Some(channel_user) = self.users.find(user_info.client_id()) {
 
-                                    // Get channel mode
-                                    // "=": public
-                                    // "@": secret (+s)
-                                    // "*": private (+p)
-                                    let channel_mode = "=";
+                    //                 // Get channel mode
+                    //                 // "=": public
+                    //                 // "@": secret (+s)
+                    //                 // "*": private (+p)
+                    //                 let channel_mode = "=";
 
-                                    // Tell the client about the user
-                                    send!(client; Respond::to(&self.host, &user.nickname()).names_reply(&channel_name, channel_mode, &channel_user.nickname()))
-                                }
-                            }
+                    //                 // Tell the client about the user
+                    //                 send!(client; Respond::to(&self.host, &user.nickname()).names_reply(&channel_name, channel_mode, &channel_user.nickname()))
+                    //             }
+                    //         }
 
-                            // Mark the end of the user list
-                            send!(client; Respond::to(&self.host, &user.nickname()).names_end(&channel_name));
-                        }
-                    }
+                    //         // Mark the end of the user list
+                    //         send!(client; Respond::to(&self.host, &user.nickname()).names_end(&channel_name));
+                    //     }
+                    // }
                 }
 
                 IrcAction::Privmsg(target, message) => {
