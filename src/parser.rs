@@ -14,48 +14,38 @@ impl IrcMessageParser {
             let mut tags: Vec<IrcMessageTag> = Vec::new();
             let mut current_key = String::new();
             let mut current_val: Option<String> = None;
-            loop {
-                match chars.next() {
-                    Some(chr) => {
-                        match chr {
-                            ' ' => {
-                                let tag = IrcMessageTag(current_key, current_val.clone());
-                                tags.push(tag);
-                                break;
-                            },
-                            ';' => {
-                                let tag = IrcMessageTag(current_key, current_val.clone());
-                                tags.push(tag);
-                                current_key = String::new();
-                                current_val = None;
-                            },
-                            '=' => current_val = Some(String::new()),
-                            _ => {
-                                match current_val {
-                                    Some(ref mut buf) => buf.push(chr),
-                                    None => current_key.push(chr),
-                                };
-                            }
-                        }
+            for chr in chars {
+                match chr {
+                    ' ' => {
+                        let tag = IrcMessageTag(current_key, current_val.clone());
+                        tags.push(tag);
+                        break;
                     },
-                    None => panic!("Unexpected end of tag."),
-                };
+                    ';' => {
+                        let tag = IrcMessageTag(current_key, current_val.clone());
+                        tags.push(tag);
+                        current_key = String::new();
+                        current_val = None;
+                    },
+                    '=' => current_val = Some(String::new()),
+                    _ => {
+                        match current_val {
+                            Some(ref mut buf) => buf.push(chr),
+                            None => current_key.push(chr),
+                        };
+                    }
+                }
             }
             IrcMessageTags::Many(tags)
         }
 
         fn parse_prefix(chars: &mut Chars) -> IrcMessagePrefix {
             let mut buf = String::new();
-            loop {
-                match chars.next() {
-                    Some(chr) => {
-                        match chr {
-                            ' ' => break,
-                            _ => buf.push(chr),
-                        }
-                    },
-                    None => panic!("Unexpected end of prefix."),
-                };
+            for chr in chars {
+                match chr {
+                    ' ' => break,
+                    _ => buf.push(chr),
+                }
             }
             IrcMessagePrefix(buf)
         }
@@ -63,14 +53,10 @@ impl IrcMessageParser {
         fn parse_command_name(chars: &mut Chars, current_char: char) -> String {
             let mut command_name = String::new();
             command_name.push(current_char);
-            loop {
-                if let Some(chr) = chars.next() {
-                    match chr {
-                        ' ' => break,
-                        _ => command_name.push(chr),
-                    }
-                } else {
-                    break;
+            for chr in chars {
+                match chr {
+                    ' ' => break,
+                    _ => command_name.push(chr),
                 }
             }
             command_name
