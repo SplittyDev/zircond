@@ -7,3 +7,5 @@ authors = ["splittydev <splittydev@protonmail.com>"]
 edition = "2018"
 
 [dependencies]
+serde_json = "1.0"
+reqwest = "0.8.8"

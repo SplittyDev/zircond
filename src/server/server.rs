@@ -186,6 +186,16 @@ impl Server {
                     send!(client; Respond::to(&self.host, &nick).your_host(format!("Your host is zircond, running version {}", &crate_version)));
                     send!(client; Respond::to(&self.host, &nick).motd_start());
                     send!(client; Respond::to(&self.host, &nick).motd(&format!("Zircon IRCd v{}", &crate_version)));
+                    if let Ok(mut res) = reqwest::get("https://api.github.com/repos/splittydev/zircond/commits") {
+                        if let Ok(json) = res.json::<serde_json::Value>() {
+                            if let Some(arr) = json.as_array() {
+                                send!(client; Respond::to(&self.host, &nick).motd("Latest changes:"));
+                                for commit in arr.iter().take(10) {
+                                    send!(client; Respond::to(&self.host, &nick).motd(&format!("- {}", commit["commit"]["message"])));
+                                }
+                            }
+                        }
+                    }
                     send!(client; Respond::to(&self.host, &nick).motd_end());
                 }
 
@@ -312,7 +322,6 @@ impl Server {
                                 if let Some(other_user) = self.users.find_mut(other_user_info.client_id()) {
 
                                     // Relay the private message to the other user
-                                    let nick = other_user.nickname();
                                     send!(other_user.stream(); Respond::to(&user_nick, &target).privmsg(message.clone()));
                                 }
                             }
