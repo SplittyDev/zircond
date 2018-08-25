@@ -169,6 +169,8 @@ impl Server {
                 
                 IrcAction::UserSetNick(nickname) => {
 
+                    // TODO: Look for nickname collisions
+
                     // Set the nickname
                     my_user!(rw).set_nickname(nickname);
                 }
@@ -186,6 +188,7 @@ impl Server {
                     send!(client; Respond::to(&self.host, &nick).your_host(format!("Your host is zircond, running version {}", &crate_version)));
                     send!(client; Respond::to(&self.host, &nick).motd_start());
                     send!(client; Respond::to(&self.host, &nick).motd(&format!("Zircon IRCd v{}", &crate_version)));
+                    send!(client; Respond::to(&self.host, &nick).motd("Zircond is open source! Contribute here: https://github.com/splittydev/zircond"));
                     if let Ok(mut res) = reqwest::get("https://api.github.com/repos/splittydev/zircond/commits") {
                         if let Ok(json) = res.json::<serde_json::Value>() {
                             if let Some(arr) = json.as_array() {
