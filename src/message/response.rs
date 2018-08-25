@@ -23,6 +23,11 @@ pub struct ResponseBuilder<'a> {
 }
 
 impl<'a> ResponseBuilder<'a> {
+
+    /// Creates a new `ResponseBuilder`.
+    /// 
+    /// - `source` - The source (usually the host)
+    /// - `target` - The target (usually a nick- or channel-name)
     pub fn new(source: &'a str, target: &'a str) -> Self {
         ResponseBuilder {
             source,
@@ -33,6 +38,10 @@ impl<'a> ResponseBuilder<'a> {
         }
     }
 
+    //
+    // Welcome sequence
+    //
+
     pub fn welcome(mut self, message: String) -> Self {
         self.command = CommandType::Code(RPL_WELCOME);
         self.parameters.push(message);
@@ -42,21 +51,6 @@ impl<'a> ResponseBuilder<'a> {
     pub fn your_host(mut self, message: String) -> Self {
         self.command = CommandType::Code(RPL_YOURHOST);
         self.parameters.push(message);
-        self
-    }
-
-    pub fn names_reply(mut self, channel_mode: &str, channel: &str, user_mode: &str, nickname: &str) -> Self {
-        self.command = CommandType::Code(RPL_NAMREPLY);
-        self.parameters.push(channel.to_owned());
-        self.parameters.push(channel_mode.to_owned());
-        self.parameters.push(format!("{}{}", user_mode, nickname));
-        self
-    }
-
-    pub fn names_end(mut self, channel: &str) -> Self {
-        self.command = CommandType::Code(RPL_ENDOFNAMES);
-        self.parameters.push(channel.to_owned());
-        self.parameters.push("End of /NAMES list.".to_owned());
         self
     }
 
@@ -80,6 +74,29 @@ impl<'a> ResponseBuilder<'a> {
         self
     }
 
+    //
+    // Listings
+    //
+
+    pub fn names_reply(mut self, channel_mode: &str, channel: &str, user_mode: &str, nickname: &str) -> Self {
+        self.command = CommandType::Code(RPL_NAMREPLY);
+        self.parameters.push(channel.to_owned());
+        self.parameters.push(channel_mode.to_owned());
+        self.parameters.push(format!("{}{}", user_mode, nickname));
+        self
+    }
+
+    pub fn names_end(mut self, channel: &str) -> Self {
+        self.command = CommandType::Code(RPL_ENDOFNAMES);
+        self.parameters.push(channel.to_owned());
+        self.parameters.push("End of /NAMES list.".to_owned());
+        self
+    }
+
+    //
+    // Messaging
+    //
+
     pub fn privmsg(mut self, message: String) -> Self {
         self.command = CommandType::Name("PRIVMSG");
         self.parameters.push(self.target.to_owned());
@@ -87,12 +104,9 @@ impl<'a> ResponseBuilder<'a> {
         self
     }
 
-    pub fn pong(mut self, challenge: String) -> Self {
-        self.command = CommandType::Name("PONG");
-        self.parameters.push(self.source.to_owned());
-        self.parameters.push(challenge);
-        self
-    }
+    //
+    // Channels
+    //
 
     pub fn join(mut self, channel: String) -> Self {
         self.command = CommandType::Name("JOIN");
@@ -104,6 +118,17 @@ impl<'a> ResponseBuilder<'a> {
         self.command = CommandType::Name("TOPIC");
         self.parameters.push(self.target.to_owned());
         self.parameters.push(topic);
+        self
+    }
+
+    //
+    // Misc
+    //
+
+    pub fn pong(mut self, challenge: String) -> Self {
+        self.command = CommandType::Name("PONG");
+        self.parameters.push(self.source.to_owned());
+        self.parameters.push(challenge);
         self
     }
 
