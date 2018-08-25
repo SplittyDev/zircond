@@ -80,9 +80,9 @@ impl<'a> ResponseBuilder<'a> {
         self
     }
 
-    pub fn privmsg(mut self, target: String, message: String) -> Self {
+    pub fn privmsg(mut self, message: String) -> Self {
         self.command = CommandType::Name("PRIVMSG");
-        self.parameters.push(target);
+        self.parameters.push(self.target.to_owned());
         self.parameters.push(message);
         self
     }

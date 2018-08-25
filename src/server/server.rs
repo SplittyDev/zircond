@@ -313,13 +313,12 @@ impl Server {
 
                                     // Relay the private message to the other user
                                     let nick = other_user.nickname();
-                                    send!(other_user.stream(); Respond::to(&user_nick, &nick).privmsg(target.clone(), message.clone()));
+                                    send!(other_user.stream(); Respond::to(&user_nick, &target).privmsg(message.clone()));
                                 }
                             }
                         }
                     } else if let Some(other_user) = self.users.find_by_name_mut(&target) {
-                        let other_nick = other_user.nickname();
-                        send!(other_user.stream(); Respond::to(&user_nick, &other_nick).privmsg(target.clone(), message.clone()));
+                        send!(other_user.stream(); Respond::to(&user_nick, &target).privmsg(message.clone()));
                     }
                 }
 
