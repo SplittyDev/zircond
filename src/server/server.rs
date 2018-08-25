@@ -53,7 +53,7 @@ impl Server {
             for client in listener.incoming() {
 
                 // Create a new client
-                let client = Arc::new(client.unwrap());
+                let shared_client = Arc::new(client.unwrap());
 
                 // Handle the client in a separate thread
                 let sender = sender.clone();
@@ -68,19 +68,19 @@ impl Server {
                     };
 
                     // Register the new client with the server
-                    sender.send((client.try_clone().unwrap(), client_id, IrcAction::UserConnect())).unwrap();
+                    sender.send((shared_client.try_clone().unwrap(), client_id, IrcAction::UserConnect())).unwrap();
 
                     // Get the remote address of the client
-                    let addr = client.peer_addr().unwrap();
+                    let addr = shared_client.peer_addr().unwrap();
 
                     // Get a buffered reader for the incoming data
-                    let mut reader = std::io::BufReader::new(client.try_clone().unwrap());
+                    let mut reader = std::io::BufReader::new(shared_client.try_clone().unwrap());
 
                     // Handle new messages in a loop
                     loop {
 
                         // Get a mutable handle for the client tcp stream
-                        let client = client.try_clone().unwrap();
+                        let client = shared_client.try_clone().unwrap();
 
                         // Read the next line
                         let mut line = String::new();
@@ -109,8 +109,38 @@ impl Server {
                                 sender.send((client, client_id, IrcAction::UserSetNames(username, realname))).unwrap()
                             }
 
-                            IrcMessageCommand::Join(channel) => {
-                                sender.send((client, client_id, IrcAction::UserJoinChannel(channel))).unwrap()
+                            IrcMessageCommand::Join(channels, keys) => {
+
+                                // Minor optimization if there is only one channel.
+                                // In this case, we don't need to obtain another shared handle to the tcp stream.
+                                if channels.len() == 1 {
+                                    let key = match &keys { Some(keys) => Some(keys[0].to_owned()), _ => None };
+                                    sender.send((client, client_id, IrcAction::UserJoinChannel(channels[0].clone(), key))).unwrap();
+                                    continue;
+                                }
+
+                                // Multiple channels
+                                for (i, channel) in channels.iter().enumerate() {
+                                    let client = shared_client.try_clone().unwrap();
+                                    let key = match &keys { Some(keys) => keys.get(i).map(|k| k.to_owned()), _ => None };
+                                    sender.send((client, client_id, IrcAction::UserJoinChannel(channel.to_owned(), key))).unwrap()
+                                }
+                            }
+
+                            IrcMessageCommand::Part(channels) => {
+
+                                // Minor optimization if there is only one channel.
+                                // In this case, we don't need to obtain another shared handle to the tcp stream.
+                                if channels.len() == 1 {
+                                    sender.send((client, client_id, IrcAction::UserPartChannel(channels[0].clone()))).unwrap();
+                                    continue;
+                                }
+
+                                // Multiple channels
+                                for channel in channels {
+                                    let client = shared_client.try_clone().unwrap();
+                                    sender.send((client, client_id, IrcAction::UserPartChannel(channel.to_owned()))).unwrap()
+                                }
                             }
 
                             IrcMessageCommand::Privmsg(target, message) => {
@@ -130,7 +160,7 @@ impl Server {
                     }
 
                     // Kill the client
-                    client.shutdown(std::net::Shutdown::Both).unwrap();
+                    shared_client.shutdown(std::net::Shutdown::Both).unwrap();
                 });
 
                 // Keep track of the thread handle
@@ -209,7 +239,7 @@ impl Server {
                     send!(client; Respond::to(&self.host, &nick).motd_end());
                 }
 
-                IrcAction::UserJoinChannel(channel_name) => {
+                IrcAction::UserJoinChannel(channel_name, channel_key) => {
 
                     // Get the current user
                     let my_user = my_user!(r);
@@ -276,6 +306,20 @@ impl Server {
                             send!(other_user.stream(); Respond::to(&nick, &nick).join(channel_name.clone()));
                         }
                     }
+                }
+
+                IrcAction::UserPartChannel(channel_name) => {
+
+                    // Find the channel
+                    if let Some(channel) = self.channels.find(&channel_name) {
+
+                        // Remove the user from the channel
+                        channel.part_user(client_id);
+
+                        // TODO: Handle user not in channel (ERR_NOTONCHANNEL)
+                    }
+
+                    // TODO: Handle channel not found (ERR_NOSUCHCHANNEL)
                 }
 
                 IrcAction::ChannelListUsers(channel_name) => {

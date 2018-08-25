@@ -22,7 +22,13 @@ pub enum IrcAction {
     /// User / Join Channel
     /// 
     /// * `0` - Channel name
-    UserJoinChannel(String),
+    /// * `1` - Channel key
+    UserJoinChannel(String, Option<String>),
+
+    /// User / Part Channel
+    /// 
+    /// * `0` - Channel name
+    UserPartChannel(String),
 
     //
     // Channels

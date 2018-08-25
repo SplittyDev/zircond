@@ -23,8 +23,14 @@ pub enum IrcMessageCommand {
 
     /// JOIN - Join a channel
     /// 
-    /// * `0` - Channel name
-    Join(String),
+    /// * `0` - Channel name(s)
+    /// * `1` - Channel key(s)
+    Join(Vec<String>, Option<Vec<String>>),
+
+    /// PART - Leave a channel
+    /// 
+    /// * `0` - Channel name(s)
+    Part(Vec<String>),
 
     /// WHO - List users in a specific channel
     /// 
@@ -49,30 +55,4 @@ pub enum IrcMessageCommand {
     /// 
     /// * `0` - Ping id
     Ping(String),
-}
-
-impl ToString for IrcMessageCommand {
-    fn to_string(&self) -> String {
-        let command: &str;
-        let mut params: Option<&str> = None;
-        match self {
-            IrcMessageCommand::None => panic!("Unable to build NONE command."),
-            IrcMessageCommand::Nick(user) => {
-                command = "NICK";
-                params = Some(user);
-            }
-            IrcMessageCommand::Join(channel) => {
-                command = "JOIN";
-                params = Some(channel);
-            }
-            _ => panic!("Unimplemented command: {:?}", self),
-        };
-        let mut buf = String::with_capacity(command.len());
-        buf.push_str(command);
-        if params.is_some() {
-            buf.push_str(&" :");
-            buf.push_str(params.unwrap());
-        }
-        buf
-    }
 }

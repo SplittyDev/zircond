@@ -143,8 +143,24 @@ impl IrcMessageParser {
                     IrcMessageCommand::User(username, realname)
                 }
                 "JOIN" => {
-                    let channel = extract!(parameters; JOIN 0 => REQ "channel name");
-                    IrcMessageCommand::Join(channel)
+                    let channels = extract!(parameters; JOIN 0 => REQ "channel names")
+                        .split(',')
+                        .map(|s| s.to_owned())
+                        .collect();
+                    let keys = extract!(parameters; PART 1 => OPT "channel keys")
+                        .map(|keys| {
+                            keys.split(',')
+                            .map(|s| s.to_owned())
+                            .collect()
+                        });
+                    IrcMessageCommand::Join(channels, keys)
+                }
+                "PART" => {
+                    let channels = extract!(parameters; PART 0 => REQ "channel names")
+                        .split(',')
+                        .map(|s| s.to_owned())
+                        .collect();
+                    IrcMessageCommand::Part(channels)
                 }
                 "PRIVMSG" => {
                     let target = extract!(parameters; PRIVMSG 0 => REQ "target");
