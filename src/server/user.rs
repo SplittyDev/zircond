@@ -24,6 +24,10 @@ impl User {
         &mut self.stream
     }
 
+    pub fn has_nickname(&self) -> bool {
+        self.nickname.is_some()
+    }
+
     pub fn nickname(&self) -> String {
         match self.nickname {
             Some(ref nickname) => nickname.clone(),

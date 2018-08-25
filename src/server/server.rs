@@ -200,7 +200,7 @@ impl Server {
                 IrcAction::UserSetNick(nickname) => {
 
                     // Look for nickname collisions
-                    if self.users.find_by_name(&nickname).is_some() {
+                    if self.users.find_by_name(&nickname).is_some() && my_user!(r).has_nickname() {
 
                         // Report name collision
                         send!(client; Respond::to(&self.host, &my_user!(r).nickname()).err_nickname_in_use(nickname));
