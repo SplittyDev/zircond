@@ -169,10 +169,17 @@ impl Server {
                 
                 IrcAction::UserSetNick(nickname) => {
 
-                    // TODO: Look for nickname collisions
+                    // Look for nickname collisions
+                    if self.users.find_by_name(&nickname).is_some() {
 
-                    // Set the nickname
-                    my_user!(rw).set_nickname(nickname);
+                        // Report name collision
+                        send!(client; Respond::to(&self.host, &my_user!(r).nickname()).err_nickname_in_use(nickname));
+
+                    } else {
+
+                        // Set the nickname
+                        my_user!(rw).set_nickname(nickname);
+                    }
                 }
 
                 IrcAction::UserSetNames(username, realname) => {

@@ -106,6 +106,17 @@ impl<'a> ResponseBuilder<'a> {
         self.parameters.push(topic);
         self
     }
+
+    //
+    // Errors
+    //
+
+    pub fn err_nickname_in_use(mut self, nick: String) -> Self {
+        self.command = CommandType::Code(ERR_NICKNAMEINUSE);
+        self.parameters.push(nick);
+        self.parameters.push("Nickname is already in use.".to_owned());
+        self
+    }
 }
 
 impl<'a> ToString for ResponseBuilder<'a> {
