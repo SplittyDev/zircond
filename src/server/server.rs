@@ -317,10 +317,9 @@ impl Server {
                                 }
                             }
                         }
-                    } else {
-
-                        // TODO: Implement
-                        println!("Unimplemented: PRIVMSG from user to user");
+                    } else if let Some(other_user) = self.users.find_by_name_mut(&target) {
+                        let other_nick = other_user.nickname();
+                        send!(other_user.stream(); Respond::to(&user_nick, &other_nick).privmsg(target.clone(), message.clone()));
                     }
                 }
 
