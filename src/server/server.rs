@@ -4,21 +4,21 @@ use std::thread;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::sync::mpsc::channel;
+
+use crate::config::ServerConfig;
 use crate::message::{IrcMessageRequest, IrcMessageCommand, Respond};
 use super::{User, Channel, UserList, ChannelList, IrcAction};
 
 pub struct Server {
-    host: String,
-    port: u16,
+    config: ServerConfig,
     users: UserList,
     channels: ChannelList,
 }
 
 impl Server {
-    pub fn new(host: Option<String>, port: Option<u16>) -> Self {
+    pub fn new(config: ServerConfig) -> Self {
         Self {
-            host: host.unwrap_or_else(|| "127.0.0.1".to_owned()),
-            port: port.unwrap_or(6667),
+            config,
             users: UserList::new(),
             channels: ChannelList::new(),
         }
@@ -42,7 +42,7 @@ impl Server {
         let (sender, recv) = channel();
 
         // Bind the tcp listener socket
-        let listener = TcpListener::bind((self.host.as_ref(), self.port)).unwrap();
+        let listener = TcpListener::bind(self.config.get_addr()).unwrap();
 
         // Spawn listening thread
         thread::spawn(move || {
@@ -203,7 +203,7 @@ impl Server {
                     if self.users.find_by_name(&nickname).is_some() && my_user!(r).has_nickname() {
 
                         // Report name collision
-                        send!(client; Respond::to(&self.host, &my_user!(r).nickname()).err_nickname_in_use(nickname));
+                        send!(client; Respond::to(self.config.get_host(), &my_user!(r).nickname()).err_nickname_in_use(nickname));
 
                     } else {
 
@@ -221,22 +221,22 @@ impl Server {
                     let nick = my_user!(r).nickname();
 
                     // Send the welcome sequence
-                    send!(client; Respond::to(&self.host, &nick).welcome(format!("Welcome to the zircond test network, {}", nick)));
-                    send!(client; Respond::to(&self.host, &nick).your_host(format!("Your host is zircond, running version {}", &crate_version)));
-                    send!(client; Respond::to(&self.host, &nick).motd_start());
-                    send!(client; Respond::to(&self.host, &nick).motd(&format!("Zircon IRCd v{}", &crate_version)));
-                    send!(client; Respond::to(&self.host, &nick).motd("Zircond is open source! Contribute here: https://github.com/splittydev/zircond"));
+                    send!(client; Respond::to(self.config.get_host(), &nick).welcome(format!("Welcome to the zircond test network, {}", nick)));
+                    send!(client; Respond::to(self.config.get_host(), &nick).your_host(format!("Your host is zircond, running version {}", &crate_version)));
+                    send!(client; Respond::to(self.config.get_host(), &nick).motd_start());
+                    send!(client; Respond::to(self.config.get_host(), &nick).motd(&format!("Zircon IRCd v{}", &crate_version)));
+                    send!(client; Respond::to(self.config.get_host(), &nick).motd("Zircond is open source! Contribute here: https://github.com/splittydev/zircond"));
                     if let Ok(mut res) = reqwest::get("https://api.github.com/repos/splittydev/zircond/commits") {
                         if let Ok(json) = res.json::<serde_json::Value>() {
                             if let Some(arr) = json.as_array() {
-                                send!(client; Respond::to(&self.host, &nick).motd("Latest changes:"));
+                                send!(client; Respond::to(self.config.get_host(), &nick).motd("Latest changes:"));
                                 for commit in arr.iter().take(10) {
-                                    send!(client; Respond::to(&self.host, &nick).motd(&format!("- {}", commit["commit"]["message"])));
+                                    send!(client; Respond::to(self.config.get_host(), &nick).motd(&format!("- {}", commit["commit"]["message"])));
                                 }
                             }
                         }
                     }
-                    send!(client; Respond::to(&self.host, &nick).motd_end());
+                    send!(client; Respond::to(self.config.get_host(), &nick).motd_end());
                 }
 
                 IrcAction::UserJoinChannel(channel_name, channel_key) => {
@@ -284,12 +284,12 @@ impl Server {
                             let channel_mode = "=";
                             
                             // Tell the client about the user
-                            send!(client; Respond::to(&self.host, &nick).names_reply(&channel_name, channel_mode, "", &channel_user.nickname()))
+                            send!(client; Respond::to(self.config.get_host(), &nick).names_reply(&channel_name, channel_mode, "", &channel_user.nickname()))
                         }
                     }
 
                     // Mark the end of the user list    
-                    send!(client; Respond::to(&self.host, &nick).names_end(&channel_name));
+                    send!(client; Respond::to(self.config.get_host(), &nick).names_end(&channel_name));
 
                     // Iterate over all users in the channel
                     for other_client in channel.users() {
@@ -343,12 +343,12 @@ impl Server {
                     //                 let channel_mode = "=";
 
                     //                 // Tell the client about the user
-                    //                 send!(client; Respond::to(&self.host, &user.nickname()).names_reply(&channel_name, channel_mode, &channel_user.nickname()))
+                    //                 send!(client; Respond::to(self.config.get_host(), &user.nickname()).names_reply(&channel_name, channel_mode, &channel_user.nickname()))
                     //             }
                     //         }
 
                     //         // Mark the end of the user list
-                    //         send!(client; Respond::to(&self.host, &user.nickname()).names_end(&channel_name));
+                    //         send!(client; Respond::to(self.config.get_host(), &user.nickname()).names_end(&channel_name));
                     //     }
                     // }
                 }
@@ -388,7 +388,7 @@ impl Server {
                 IrcAction::Pong(id) => {
 
                     // Respond to ping
-                    send!(client; Respond::to(&self.host, &my_user!(r).nickname()).pong(id));
+                    send!(client; Respond::to(self.config.get_host(), &my_user!(r).nickname()).pong(id));
                 }
 
                 IrcAction::Disconnect() => {

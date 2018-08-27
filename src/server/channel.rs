@@ -1,3 +1,4 @@
+#[derive(Serialize, Deserialize)]
 pub struct ChannelUserInfo {
     client_id: usize,
 }
@@ -14,6 +15,7 @@ impl ChannelUserInfo {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Channel {
     pub name: String,
     pub topic: Option<String>,
