@@ -228,6 +228,13 @@ impl Server {
                             }
                         }
                         send!(client; Respond::to(self.config.get_host(), &nick).motd_end());
+
+                        // Join autojoin channels
+                        if let Some(channels) = self.config.get_autojoin_channels() {
+                            for channel in channels {
+                                send!(client; Respond::to(&nick, &nick).join(channel.clone()));
+                            }
+                        }
                     }
                 }
 
