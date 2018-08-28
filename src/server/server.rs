@@ -180,7 +180,7 @@ impl Server {
 
             macro_rules! dispatch {
                 ($dispatcher:expr) => {
-                    crate::dispatch::dispatch($dispatcher, self, &mut client, client_id);
+                    crate::dispatch::dispatch(&$dispatcher, self, &mut client, client_id);
                 };
             }
 

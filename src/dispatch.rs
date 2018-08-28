@@ -15,6 +15,6 @@ pub use self::join_channel::JoinChannel;
 use std::net::TcpStream;
 use crate::server::Server;
 
-pub fn dispatch(dispatcher: impl CommandDispatch, mut server: &mut Server, mut client: &mut TcpStream, client_id: usize) {
+pub fn dispatch(dispatcher: &impl CommandDispatch, mut server: &mut Server, mut client: &mut TcpStream, client_id: usize) {
     dispatcher.dispatch(&mut server, &mut client, client_id);
 }
