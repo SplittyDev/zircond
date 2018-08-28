@@ -3,8 +3,9 @@
 mod protocol;
 mod message;
 mod parser;
-mod server;
 mod config;
+mod server;
+mod dispatch;
 
 use server::Server;
 use config::ServerConfig;

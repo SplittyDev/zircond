@@ -10,9 +10,9 @@ use crate::message::{IrcMessageRequest, IrcMessageCommand, Respond};
 use super::{User, Channel, UserList, ChannelList, IrcAction};
 
 pub struct Server {
-    config: ServerConfig,
-    users: UserList,
-    channels: ChannelList,
+    pub config: ServerConfig,
+    pub users: UserList,
+    pub channels: ChannelList,
 }
 
 impl Server {
@@ -178,6 +178,12 @@ impl Server {
         // Receive actions
         for (mut client, client_id, action) in recv {
 
+            macro_rules! dispatch {
+                ($dispatcher:expr) => {
+                    crate::dispatch::dispatch($dispatcher, self, &mut client, client_id);
+                };
+            }
+
             // Provide easy access to the sender of the action
             macro_rules! my_user {
                 (r) => {
@@ -246,71 +252,12 @@ impl Server {
 
                 IrcAction::UserJoinChannel(channel_name, channel_key) => {
 
-                    // Get the current user
-                    let my_user = my_user!(r);
-
-                    // Test whether the channel already exists
-                    if self.channels.find(&channel_name).is_none() {
-
-                        // Create a new channel
-                        let channel = Channel::new(channel_name.clone());
-
-                        // Add the new channel to the channel list
-                        self.channels.add(channel);
-                    }
-
-                    // Find the channel
-                    let channel = self.channels.find(&channel_name).unwrap();
-
-                    // Add the user to the channel
-                    channel.join_user(client_id);
-
-                    // Send join acknowledgement to the user
-                    let nick = my_user.nickname();
-                    send!(client; Respond::to(&nick, &nick).join(channel_name.clone()));
-
-                    // Test whether the channel has a topic
-                    if let Some(topic) = &channel.topic {
-
-                        // Tell the client about the topic
-                        send!(client; Respond::to(&nick, &channel_name).topic(topic.clone()));
-                    }
-
-                    // Iterate over all users in the channel
-                    for user_info in channel.users() {
-                        
-                        // Find the user
-                        if let Some(channel_user) = self.users.find(user_info.client_id()) {
-
-                            // Get channel mode
-                            // "=": public
-                            // "@": secret (+s)
-                            // "*": private (+p)
-                            let channel_mode = "=";
-                            
-                            // Tell the client about the user
-                            send!(client; Respond::to(self.config.get_host(), &nick).names_reply(&channel_name, channel_mode, "", &channel_user.nickname()))
+                    dispatch!(
+                        crate::dispatch::JoinChannel {
+                            channel_name,
+                            channel_key,
                         }
-                    }
-
-                    // Mark the end of the user list    
-                    send!(client; Respond::to(self.config.get_host(), &nick).names_end(&channel_name));
-
-                    // Iterate over all users in the channel
-                    for other_client in channel.users() {
-
-                        // Skip this user if it is the current user
-                        if other_client.client_id() == client_id {
-                            continue;
-                        }
-
-                        // Find user by user id
-                        if let Some(other_user) = self.users.find_mut(other_client.client_id()) {
-
-                            // Tell the user's client about the join
-                            send!(other_user.stream(); Respond::to(&nick, &nick).join(channel_name.clone()));
-                        }
-                    }
+                    )
                 }
 
                 IrcAction::UserPartChannel(channel_name) => {
