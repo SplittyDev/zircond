@@ -1,5 +1,6 @@
 use crate::message::IrcMessageTag;
 
+#[allow(dead_code)]
 pub enum IrcMessageTags {
     One(IrcMessageTag),
     Many(Vec<IrcMessageTag>),

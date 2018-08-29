@@ -223,7 +223,7 @@ impl Server {
                     })
                 }
 
-                IrcAction::ChannelListUsers(channel_name) => {
+                IrcAction::ChannelListUsers(_channel_name) => {
 
                     // // Find the user
                     // if let Some(user) = self.users.find(client_id) {
@@ -255,35 +255,10 @@ impl Server {
                 }
 
                 IrcAction::Privmsg(target, message) => {
-
-                    // Get the nickname of the current user
-                    let user_nick = my_user!(r).nickname();
-
-                    // Determine whether the target is a user or a channel
-                    if target.starts_with('#') {
-
-                        // Find the channel
-                        if let Some(channel) = self.channels.find(&target) {
-
-                            // Find all users in the channel
-                            for other_user_info in channel.users() {
-
-                                // Skip this user if it is the current user
-                                if other_user_info.client_id() == client_id {
-                                    continue;
-                                }
-
-                                // Find the user
-                                if let Some(other_user) = self.users.find_mut(other_user_info.client_id()) {
-
-                                    // Relay the private message to the other user
-                                    send!(other_user.stream(); Respond::to(&user_nick, &target).privmsg(message.clone()));
-                                }
-                            }
-                        }
-                    } else if let Some(other_user) = self.users.find_by_name_mut(&target) {
-                        send!(other_user.stream(); Respond::to(&user_nick, &target).privmsg(message.clone()));
-                    }
+                    dispatch!(crate::dispatch::PrivateMessage {
+                        target,
+                        message,
+                    })
                 }
 
                 IrcAction::Pong(id) => {

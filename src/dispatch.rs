@@ -21,5 +21,8 @@ pub(crate) use self::join_channel::JoinChannel;
 mod part_channel;
 pub(crate) use self::part_channel::PartChannel;
 
+mod private_message;
+pub(crate) use self::private_message::PrivateMessage;
+
 use std::net::TcpStream;
 use crate::server::Server;
