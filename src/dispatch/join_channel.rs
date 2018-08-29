@@ -16,8 +16,14 @@ impl CommandDispatch for JoinChannel {
         // Get the current user
         let my_user = server.users.find(client_id).unwrap();
 
-        // Test whether the channel already exists
-        if server.channels.find(&self.channel_name).is_none() {
+        // Test whether the channel exists
+        if let Some(channel) = server.channels.find(&self.channel_name) {
+
+            // Test whether the user is already in the channel
+            if channel.contains(client_id) {
+                return; // just do nothing
+            }
+        } else {
         
             // Create a new channel
             let channel = Channel::new(self.channel_name.clone());

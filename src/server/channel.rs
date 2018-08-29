@@ -37,6 +37,10 @@ impl Channel {
         &self.users
     }
 
+    pub fn contains(&self, client_id: usize) -> bool {
+        self.users.iter().any(|user| user.client_id() == client_id)
+    }
+
     pub fn join_user(&mut self, client_id: usize) {
         let user_info = ChannelUserInfo::new(client_id);
         self.users.push(user_info);

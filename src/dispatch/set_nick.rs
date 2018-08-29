@@ -46,6 +46,15 @@ impl CommandDispatch for SetNick {
             // Join autojoin channels
             if let Some(channels) = server.config.get_autojoin_channels() {
                 for channel in channels {
+
+                    // Make sure to not join any channels the user is already a part of
+                    if let Some(existing_channel) = server.channels.find(&channel) {
+                        if existing_channel.contains(client_id) {
+                            continue;
+                        }
+                    }
+
+                    // Join the channel
                     super::dispatch(&crate::dispatch::JoinChannel {
                         channel_name: channel,
                         channel_key: None,
