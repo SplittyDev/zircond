@@ -1,4 +1,3 @@
-
 // Macro for simple server-to-client communication
 macro_rules! send {
     ($writer:expr; $variant:expr) => {
@@ -6,15 +5,18 @@ macro_rules! send {
     };
 }
 
-mod command_dispatch;
-mod join_channel;
-
-pub(crate) use self::command_dispatch::CommandDispatch;
-pub use self::join_channel::JoinChannel;
-
-use std::net::TcpStream;
-use crate::server::Server;
-
 pub fn dispatch(dispatcher: &impl CommandDispatch, mut server: &mut Server, mut client: &mut TcpStream, client_id: usize) {
     dispatcher.dispatch(&mut server, &mut client, client_id);
 }
+
+mod command_dispatch;
+pub(crate) use self::command_dispatch::CommandDispatch;
+
+mod set_nick;
+pub(crate) use self::set_nick::SetNick;
+
+mod join_channel;
+pub(crate) use self::join_channel::JoinChannel;
+
+use std::net::TcpStream;
+use crate::server::Server;

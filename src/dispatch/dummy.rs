@@ -1,7 +1,9 @@
 use std::net::TcpStream;
 
-use crate::server::Server;
 use crate::dispatch::command_dispatch::CommandDispatch;
+
+use crate::server::{Server, User, Channel};
+use crate::message::Respond;
 
 pub struct Dummy {
     // Parameters
