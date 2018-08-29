@@ -122,19 +122,19 @@ impl Server {
                                 }
                             }
 
-                            IrcMessageCommand::Part(channels) => {
+                            IrcMessageCommand::Part(channels, message) => {
 
                                 // Minor optimization if there is only one channel.
                                 // In this case, we don't need to obtain another shared handle to the tcp stream.
                                 if channels.len() == 1 {
-                                    sender.send((client, client_id, IrcAction::UserPartChannel(channels[0].clone()))).unwrap();
+                                    sender.send((client, client_id, IrcAction::UserPartChannel(channels[0].clone(), message.clone()))).unwrap();
                                     continue;
                                 }
 
                                 // Multiple channels
                                 for channel in channels {
                                     let client = shared_client.try_clone().unwrap();
-                                    sender.send((client, client_id, IrcAction::UserPartChannel(channel.to_owned()))).unwrap()
+                                    sender.send((client, client_id, IrcAction::UserPartChannel(channel.to_owned(), message.clone()))).unwrap()
                                 }
                             }
 
@@ -217,9 +217,10 @@ impl Server {
                     })
                 }
 
-                IrcAction::UserPartChannel(channel_name) => {
+                IrcAction::UserPartChannel(channel_name, message) => {
                     dispatch!(crate::dispatch::PartChannel {
                         channel_name,
+                        message,
                     })
                 }
 

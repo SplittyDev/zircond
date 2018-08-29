@@ -30,7 +30,8 @@ pub enum IrcMessageCommand {
     /// PART - Leave a channel
     /// 
     /// * `0` - Channel name(s)
-    Part(Vec<String>),
+    /// * `1` - Reason
+    Part(Vec<String>, Option<String>),
 
     /// WHO - List users in a specific channel
     /// 

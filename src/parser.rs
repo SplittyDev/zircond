@@ -160,7 +160,8 @@ impl IrcMessageParser {
                         .split(',')
                         .map(|s| s.to_owned())
                         .collect();
-                    IrcMessageCommand::Part(channels)
+                    let message = extract!(parameters; PART 1 => OPT "message");
+                    IrcMessageCommand::Part(channels, message)
                 }
                 "PRIVMSG" => {
                     let target = extract!(parameters; PRIVMSG 0 => REQ "target");
