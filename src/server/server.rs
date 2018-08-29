@@ -195,11 +195,9 @@ impl Server {
                 }
                 
                 IrcAction::UserSetNick(nickname) => {
-                    dispatch!(
-                        crate::dispatch::SetNick {
-                            nickname,
-                        }
-                    )
+                    dispatch!(crate::dispatch::SetNick {
+                        nickname,
+                    })
                 }
 
                 IrcAction::UserSetNames(username, realname) => {
@@ -209,26 +207,16 @@ impl Server {
                 }
 
                 IrcAction::UserJoinChannel(channel_name, channel_key) => {
-                    dispatch!(
-                        crate::dispatch::JoinChannel {
-                            channel_name,
-                            channel_key,
-                        }
-                    )
+                    dispatch!(crate::dispatch::JoinChannel {
+                        channel_name,
+                        channel_key,
+                    })
                 }
 
                 IrcAction::UserPartChannel(channel_name) => {
-
-                    // Find the channel
-                    if let Some(channel) = self.channels.find(&channel_name) {
-
-                        // Remove the user from the channel
-                        channel.part_user(client_id);
-
-                        // TODO: Handle user not in channel (ERR_NOTONCHANNEL)
-                    }
-
-                    // TODO: Handle channel not found (ERR_NOSUCHCHANNEL)
+                    dispatch!(crate::dispatch::PartChannel {
+                        channel_name,
+                    })
                 }
 
                 IrcAction::ChannelListUsers(channel_name) => {

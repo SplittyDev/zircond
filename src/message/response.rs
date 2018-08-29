@@ -113,6 +113,13 @@ impl<'a> ResponseBuilder<'a> {
         self.parameters.push(channel);
         self
     }
+
+    pub fn part(mut self, channel: String, message: String) -> Self {
+        self.command = CommandType::Name("PART");
+        self.parameters.push(channel);
+        self.parameters.push(message);
+        self
+    }
     
     pub fn topic(mut self, topic: String) -> Self {
         self.command = CommandType::Name("TOPIC");

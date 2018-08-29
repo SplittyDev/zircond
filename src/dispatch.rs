@@ -18,5 +18,8 @@ pub(crate) use self::set_nick::SetNick;
 mod join_channel;
 pub(crate) use self::join_channel::JoinChannel;
 
+mod part_channel;
+pub(crate) use self::part_channel::PartChannel;
+
 use std::net::TcpStream;
 use crate::server::Server;

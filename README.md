@@ -25,9 +25,7 @@ Fully implemented:
 
 Fully implemented (testing):
 - [x] NICK
-  - [x] Nickname collision detection
-- [x] PART
-  - [x] Multiple channels
+  - [x] Collision detection (ERR_NICKNAMEINUSE)
 - [x] PRIVMSG
   - [x] User to Channel
   - [x] User to User
@@ -38,7 +36,12 @@ Partially implemented:
   - [ ] Hostname/Servername
 - [x] JOIN
   - [x] Multiple channels
+  - [x] Notify other users
   - [ ] Channel keys
+- [x] PART
+  - [x] Multiple channels
+  - [x] Notify other users
+  - [ ] Custom part message
 
 
 [RFC1459]: https://tools.ietf.org/html/rfc1459
