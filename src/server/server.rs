@@ -238,7 +238,10 @@ impl Server {
                         // Join autojoin channels
                         if let Some(channels) = self.config.get_autojoin_channels() {
                             for channel in channels {
-                                send!(client; Respond::to(&nick, &nick).join(channel.clone()));
+                                dispatch!(crate::dispatch::JoinChannel {
+                                    channel_name: channel,
+                                    channel_key: None,
+                                })
                             }
                         }
                     }
