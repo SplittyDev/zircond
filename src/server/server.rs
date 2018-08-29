@@ -1,5 +1,9 @@
+
+// Networking
 use std::io::{Write, BufRead};
 use std::net::{TcpListener};
+
+// Threading / Synchronization
 use std::thread;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -7,7 +11,7 @@ use std::sync::mpsc::channel;
 
 use crate::config::ServerConfig;
 use crate::message::{IrcMessageRequest, IrcMessageCommand, Respond};
-use super::{User, Channel, UserList, ChannelList, IrcAction};
+use super::{User, UserList, ChannelList, IrcAction};
 
 pub struct Server {
     pub config: ServerConfig,

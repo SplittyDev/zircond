@@ -149,6 +149,20 @@ impl<'a> ResponseBuilder<'a> {
         self.parameters.push("Nickname is already in use.".to_owned());
         self
     }
+
+    pub fn err_not_on_channel(mut self, channel_name: String) -> Self {
+        self.command = CommandType::Code(ERR_NOTONCHANNEL);
+        self.parameters.push(channel_name);
+        self.parameters.push("You're not on that channel.".to_owned());
+        self
+    }
+
+    pub fn err_no_such_channel(mut self, channel_name: String) -> Self {
+        self.command = CommandType::Code(ERR_NOSUCHCHANNEL);
+        self.parameters.push(channel_name);
+        self.parameters.push("No such channel.".to_owned());
+        self
+    }
 }
 
 impl<'a> ToString for ResponseBuilder<'a> {

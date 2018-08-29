@@ -18,7 +18,15 @@ impl CommandDispatch for PartChannel {
         // Find the channel
         if let Some(channel) = server.channels.find(&self.channel_name) {
 
-            // TODO: Handle user not in channel (ERR_NOTONCHANNEL)
+            // Test whether the user is on the current channel
+            if !channel.contains(client_id) {
+
+                // Notify the user about the error
+                send!(client; Respond::to(server.config.get_host(), &nick).err_not_on_channel(self.channel_name.clone()));
+
+                // No need to do anything else here
+                return;
+            }
 
             // Remove the user from the channel
             channel.part_user(client_id);
@@ -41,8 +49,11 @@ impl CommandDispatch for PartChannel {
                     send!(other_user.stream(); Respond::to(&nick, &nick).part(self.channel_name.clone(), nick.clone()));
                 }
             }
-        }
+        } else {
 
-        // TODO: Handle channel not found (ERR_NOSUCHCHANNEL)
+            // Channel not found
+            // Notify the user about the error
+            send!(client; Respond::to(server.config.get_host(), &nick).err_no_such_channel(self.channel_name.clone()));
+        }
     }
 }

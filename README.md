@@ -29,6 +29,10 @@ Fully implemented (testing):
 - [x] PRIVMSG
   - [x] User to Channel
   - [x] User to User
+- [x] PART
+  - [x] Multiple channels
+  - [x] Notify other users
+  - [x] Custom part message
 
 Partially implemented:
 - [x] USER
@@ -38,10 +42,6 @@ Partially implemented:
   - [x] Multiple channels
   - [x] Notify other users
   - [ ] Channel keys
-- [x] PART
-  - [x] Multiple channels
-  - [x] Notify other users
-  - [ ] Custom part message
 
 
 [RFC1459]: https://tools.ietf.org/html/rfc1459
