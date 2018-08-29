@@ -21,7 +21,7 @@ impl ChannelUserInfo {
 pub struct Channel {
     pub name: String,
     pub topic: Option<String>,
-    users: Vec<ChannelUserInfo>,
+    #[serde(skip)] users: Vec<ChannelUserInfo>,
 }
 
 impl Channel {

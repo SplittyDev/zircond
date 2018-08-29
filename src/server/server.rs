@@ -1,9 +1,6 @@
-
-// Networking
-use std::io::{Write, BufRead};
-use std::net::{TcpListener};
-
-// Threading / Synchronization
+use std::fs::File;
+use std::io::{Read, Write, BufRead};
+use std::net::TcpListener;
 use std::thread;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -17,15 +14,60 @@ pub struct Server {
     pub config: ServerConfig,
     pub users: UserList,
     pub channels: ChannelList,
+    pub last_state: Option<String>,
 }
 
 impl Server {
     pub fn new(config: ServerConfig) -> Self {
-        Self {
+        let mut server = Self {
             config,
             users: UserList::new(),
             channels: ChannelList::new(),
+            last_state: None,
+        };
+        server.restore_state();
+        server
+    }
+
+    pub fn save_state(&mut self) -> std::io::Result<()> {
+
+        // Serialize state to string
+        let state = toml::to_string(&self.channels)
+            .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err.to_string()))?;
+        
+        // Determine whether the state needs to be updated
+        let update_state = match &self.last_state {
+            Some(last_state) => last_state == &state,
+            _ => true,
+        };
+
+        // Write the new state to disk
+        if update_state {
+            let mut file = File::create(".state.toml")?;
+            file.write_all(state.as_ref())?;
+            self.last_state = Some(state);
         }
+
+        Ok(())
+    }
+
+    pub fn restore_state(&mut self) {
+
+        // Open the state file
+        let mut file = match File::open(".state.toml") {
+            Ok(file) => file,
+            _ => return,
+        };
+
+        // Read the serialized state from disk
+        let mut buf = String::new();
+        file.read_to_string(&mut buf).expect("Unable to read the state file.");
+
+        // Deserialize the state
+        let state: ChannelList = toml::from_str(&buf).expect("Unable to parse the state file.");
+
+        // Update the current state
+        self.channels = state;
     }
 
     pub fn listen(&mut self) {
@@ -277,6 +319,9 @@ impl Server {
 
                 _ => println!("Unimplemented action: {:?}", action)
             }
+
+            // Save the current state
+            self.save_state().unwrap();
         }
     }
 }

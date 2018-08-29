@@ -1,5 +1,7 @@
 use super::Channel;
+use serde_derive::{Serialize, Deserialize};
 
+#[derive(Serialize, Deserialize)]
 pub struct ChannelList {
     channels: Vec<Channel>,
 }
