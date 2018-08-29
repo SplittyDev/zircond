@@ -1,2 +1,6 @@
 /target
 **/*.rs.bk
+
+# Zircond
+config.toml
+.state.toml
