@@ -1,5 +1,3 @@
-#![feature(uniform_paths)]
-
 // Get crate version
 macro_rules! crate_version {
     () => (
